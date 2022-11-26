@@ -1,0 +1,23 @@
+FROM golang:1.19
+
+WORKDIR /build
+COPY ./go.mod ./go.sum ./
+RUN go mod download
+
+COPY ./config.go ./
+COPY ./internal ./internal
+COPY ./cmd ./cmd
+COPY ./pkg ./pkg
+
+ARG CGO_ENABLED=0 
+RUN CGO_ENABLED=0 go build -o ./aira ./cmd/aira
+
+FROM alpine:3.16
+
+COPY --from=0 /build/aria /bin/aira
+COPY ./assets /aira/assets
+
+EXPOSE 80
+
+WORKDIR /aira
+CMD ["aira"]

@@ -1,0 +1,43 @@
+name: trinity
+
+services:
+  trinity:
+    build:
+      context: .
+      dockerfile: Dockerfile.trinity
+    image: chiyoi/trinity
+    container_name: trinity
+    hostname: trinity
+    networks:
+      - trinity_network
+      - neko03_network
+    restart: always
+
+  aira:
+    build:
+      context: .
+      dockerfile: Dockerfile.aira
+    image: chiyoi/trinity-aira
+    container_name: aira
+    hostname: aira
+    networks:
+      - trinity_network
+    restart: always
+
+  maru:
+    build:
+      context: .
+      dockerfile: Dockerfile.maru
+    image: chiyoi/trinity-maru
+    container_name: maru
+    hostname: maru
+    networks:
+      - trinity_network
+    restart: always
+
+networks:
+  trinity-network:
+    name: trinity_network
+  neko03-network:
+    name: neko03_network
+    external: true

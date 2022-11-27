@@ -1,6 +1,10 @@
 package onebot
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/chiyoi/trinity/pkg/onebot/message"
+)
 
 type Request struct {
 	Action Action         `json:"action"`
@@ -56,6 +60,6 @@ type RequestDataSendMsg struct {
 	MessageType EventMessageType `json:"message_type"`
 	UserId      UserId           `json:"user_id"`
 	GroupId     GroupId          `json:"group_id"`
-	Message     Message          `json:"message"`
+	Message     message.Message  `json:"message"`
 	AutoEscape  bool             `json:"auto_escape"`
 }

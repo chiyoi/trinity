@@ -5,23 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/chiyoi/trinity/pkg/onebot/message"
 	"github.com/chiyoi/trinity/pkg/websocket"
 )
 
-func FormatMsg(a ...any) (msg Message) {
+func FormatMsg(a ...any) (msg message.Message) {
 	for _, aa := range a {
 		switch ta := aa.(type) {
-		case Message:
+		case message.Message:
 			msg.Extend(ta)
-		case MessageSegment:
+		case message.Segment:
 			msg.Append(ta)
 		default:
-			msg.Append(MessageSegment{
-				Type: MessageText,
-				Data: map[string]string{
-					"text": fmt.Sprint(aa),
-				},
-			})
+			msg.Append(message.Text(fmt.Sprint(aa)))
 		}
 	}
 	return
@@ -31,9 +27,9 @@ func SendMsgCtx(ctx context.Context, ws websocket.WebSocket, id UserId, a ...any
 	req := Request{
 		Action: ActionSendMsg,
 		Params: map[string]any{
-			"message_type": MessagePrivate,
-			"user_id":      id,
-			"message":      FormatMsg(a...),
+			"message.Message_type": MessagePrivate,
+			"user_id":              id,
+			"message.Message":      FormatMsg(a...),
 		},
 	}
 	b, err := json.Marshal(req)

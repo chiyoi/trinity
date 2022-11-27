@@ -2,6 +2,8 @@ package onebot
 
 import (
 	"time"
+
+	"github.com/chiyoi/trinity/pkg/onebot/message"
 )
 
 type EventType string
@@ -111,7 +113,7 @@ type Event struct {
 	SubType     MessageSubtype   `json:"sub_type"`
 	MessageId   MessageId        `json:"message_id"`
 	UserId      UserId           `json:"user_id"`
-	Message     Message          `json:"message"`
+	Message     message.Message  `json:"message"`
 	RawMessage  string           `json:"raw_message"`
 	Font        int              `json:"font"`
 	Sender      Sender           `json:"sender"`
@@ -270,37 +272,3 @@ type Sender struct {
 	Sex      Sex    `json:"sex"`
 	Age      int32  `json:"age"`
 }
-
-type MessageType string
-
-const (
-	MessageText      MessageType = "text"
-	MessageFace      MessageType = "face"
-	MessageRecord    MessageType = "record"
-	MessageVideo     MessageType = "video"
-	MessageAt        MessageType = "at"
-	MessageMusic     MessageType = "music"
-	MessageImage     MessageType = "image"
-	MessageReply     MessageType = "reply"
-	MessageRedbag    MessageType = "redbag"
-	MessagePoke      MessageType = "poke"
-	MessageGift      MessageType = "gift"
-	MessageForward   MessageType = "forward"
-	MessageNode      MessageType = "node"
-	MessageXML       MessageType = "xml"
-	MessageJSON      MessageType = "json"
-	MessageCardimage MessageType = "cardimage"
-	MessageTTS       MessageType = "tts"
-)
-
-type Message []MessageSegment
-
-type MessageSegment struct {
-	Type MessageType       `json:"type"`
-	Data map[string]string `json:"data"`
-}
-
-func (msg Message) Append(seg MessageSegment) Message { return append(msg, seg) }
-func (msg Message) Extend(msg1 Message) Message       { return append(msg, msg1...) }
-
-func (seg MessageSegment) Chain(seg1 MessageSegment) Message { return append(Message{}, seg, seg1) }

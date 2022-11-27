@@ -1,30 +1,35 @@
 package message
 
-import "github.com/chiyoi/trinity/pkg/onebot"
+type Message []Segment
 
-func Text(txt string) onebot.MessageSegment {
-	return onebot.MessageSegment{
-		Type: onebot.MessageText,
-		Data: map[string]string{
-			"text": txt,
-		},
-	}
+type Segment struct {
+	Type MessageType       `json:"type"`
+	Data map[string]string `json:"data"`
 }
 
-func Image(url string) onebot.MessageSegment {
-	return onebot.MessageSegment{
-		Type: onebot.MessageImage,
-		Data: map[string]string{
-			"file": url,
-		},
-	}
-}
+func (msg Message) Append(seg Segment) Message  { return append(msg, seg) }
+func (msg Message) Extend(msg1 Message) Message { return append(msg, msg1...) }
 
-func Record(url string) onebot.MessageSegment {
-	return onebot.MessageSegment{
-		Type: onebot.MessageRecord,
-		Data: map[string]string{
-			"file": url,
-		},
-	}
-}
+func (seg Segment) Chain(seg1 Segment) Message { return append(Message{}, seg, seg1) }
+
+type MessageType string
+
+const (
+	TypeText      MessageType = "text"
+	TypeFace      MessageType = "face"
+	TypeRecord    MessageType = "record"
+	TypeVideo     MessageType = "video"
+	TypeAt        MessageType = "at"
+	TypeMusic     MessageType = "music"
+	TypeImage     MessageType = "image"
+	TypeReply     MessageType = "reply"
+	TypeRedbag    MessageType = "redbag"
+	TypePoke      MessageType = "poke"
+	TypeGift      MessageType = "gift"
+	TypeForward   MessageType = "forward"
+	TypeNode      MessageType = "node"
+	TypeXML       MessageType = "xml"
+	TypeJSON      MessageType = "json"
+	TypeCardimage MessageType = "cardimage"
+	TypeTTS       MessageType = "tts"
+)

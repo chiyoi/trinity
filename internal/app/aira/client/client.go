@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -49,22 +50,17 @@ func PostMessage(a ...any) {
 	}
 }
 
-func ErrorCallback(err error) {
-	logs.Error("aira:", err)
-	PostMessage(fmt.Sprintf("何処か間違ったような…[%s]", err))
-}
-
 func CacheFile(data []byte) (sasUrl string, err error) {
 	return trinity.CacheFile(trinityUrl, auth, data)
 }
 
-func RegisterListener(rdb *redis.Client) {
+func RegisterListener(rdb *redis.Client) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	rdb.SAdd(ctx, redisKeyListeners, serviceUrl)
+	return rdb.SAdd(ctx, redisKeyListeners, serviceUrl).Err()
 }
 
-func SyncWorker(chanTimestamp chan int64, rdb *redis.Client) {
+func EventSynchronizer(chanTimestamp chan int64, rdb *redis.Client) (err error) {
 	timestamp := time.Now().Unix()
 	for {
 		select {
@@ -74,14 +70,19 @@ func SyncWorker(chanTimestamp chan int64, rdb *redis.Client) {
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
 		b := rdb.SIsMember(ctx, redisKeyListeners, serviceUrl)
-		if b.Err() != nil || b.Val() {
-			continue
+		if rdbErr := b.Err(); rdbErr != nil || b.Val() {
+			if nErr, ok := rdbErr.(net.Error); ok && nErr.Timeout() {
+				continue
+			}
+			return rdbErr
 		}
-		cancel()
 		ctx, cancel = context.WithTimeout(context.Background(), time.Second*10)
-		rdb.SAdd(ctx, redisKeyListeners, serviceUrl)
-		cancel()
+		defer cancel()
+		if err = rdb.SAdd(ctx, redisKeyListeners, serviceUrl).Err(); err != nil {
+			return
+		}
 
 		ids, err := trinity.QueryMessageIdsTimeRange(trinityUrl, auth, timestamp, time.Now().Unix())
 		if err != nil {

@@ -24,7 +24,7 @@ type dMessage struct {
 }
 
 func postMessage(baseCtx context.Context, msgColl *mongo.Collection, msg dMessage) (id string, err error) {
-	ctx, cancel := context.WithTimeout(baseCtx, dbOperationTimeout)
+	ctx, cancel := context.WithTimeout(baseCtx, reqTimeout)
 	defer cancel()
 	resp, err := msgColl.InsertOne(ctx, msg)
 	if err != nil {
@@ -35,7 +35,7 @@ func postMessage(baseCtx context.Context, msgColl *mongo.Collection, msg dMessag
 }
 
 func getMessage(baseCtx context.Context, coll *mongo.Collection, idh string) (doc dMessage, err error) {
-	ctx, cancel := context.WithTimeout(baseCtx, dbOperationTimeout)
+	ctx, cancel := context.WithTimeout(baseCtx, reqTimeout)
 	defer cancel()
 
 	id, err := primitive.ObjectIDFromHex(idh)
@@ -56,7 +56,7 @@ func queryMessageIds(baseCtx context.Context, coll *mongo.Collection, from, to i
 	if to != 0 {
 		rang = append(rang, bson.M{"$lte": to})
 	}
-	ctx, cancel := context.WithTimeout(baseCtx, dbOperationTimeout)
+	ctx, cancel := context.WithTimeout(baseCtx, reqTimeout)
 	defer cancel()
 	cur, err := coll.Find(ctx, bson.M{
 		"time": bson.M{
@@ -70,7 +70,7 @@ func queryMessageIds(baseCtx context.Context, coll *mongo.Collection, from, to i
 	}
 
 	var msgs []dMessage
-	ctx, cancel = context.WithTimeout(baseCtx, dbOperationTimeout)
+	ctx, cancel = context.WithTimeout(baseCtx, reqTimeout)
 	defer cancel()
 	if err = cur.All(ctx, &msgs); err != nil {
 		return

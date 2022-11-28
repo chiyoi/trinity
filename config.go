@@ -72,7 +72,9 @@ var AiraConfig = map[string]any{
 var MaruConfig = map[string]any{
 	"ServiceURL": "http://maru/",
 
-	"TrinityURL": "http://trinity/",
+	"TrinityURL":     "http://trinity/",
+	"OnebotURL":      "http://gocq/",
+	"OnebotEventURL": "http://gocq:8080/",
 
 	"RedisOptions": &redis.Options{
 		Addr:     "redis-18080.c56.east-us.azure.cloud.redislabs.com:18080",

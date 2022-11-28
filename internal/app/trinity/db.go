@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/chiyoi/trinity/internal/app/trinity/config"
 	"github.com/go-redis/redis/v8"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var (
-	dbOperationTimeout = time.Second * 10
+	reqTimeout = time.Second * 10
 )
 
 func OpenMongo() (db *mongo.Database, err error) {
@@ -21,19 +22,19 @@ func OpenMongo() (db *mongo.Database, err error) {
 		}
 	}()
 	bg := context.Background()
-	mongodbUri, err := GetConfig[string]("MongodbURI")
+	mongodbUri, err := config.GetErr[string]("MongodbURI")
 	if err != nil {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(bg, dbOperationTimeout)
+	ctx, cancel := context.WithTimeout(bg, reqTimeout)
 	defer cancel()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongodbUri))
 	if err != nil {
 		return
 	}
 
-	mongodbDatabase, err := GetConfig[string]("MongodbDatabase")
+	mongodbDatabase, err := config.GetErr[string]("MongodbDatabase")
 	if err != nil {
 		return
 	}
@@ -42,7 +43,7 @@ func OpenMongo() (db *mongo.Database, err error) {
 }
 
 func OpenRedis() (rdb *redis.Client, err error) {
-	opt, err := GetConfig[*redis.Options]("RedisOptions")
+	opt, err := config.GetErr[*redis.Options]("RedisOptions")
 	if err != nil {
 		return
 	}

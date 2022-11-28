@@ -6,27 +6,37 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/chiyoi/trinity/internal/app/aira/app"
-	"github.com/chiyoi/trinity/internal/app/aira/app/aira"
-	"github.com/chiyoi/trinity/internal/app/aira/app/atri"
-	"github.com/chiyoi/trinity/internal/app/aira/app/eroira"
+	"github.com/chiyoi/trinity/internal/app/aira/handlers"
+	"github.com/chiyoi/trinity/internal/app/aira/handlers/aira"
+	"github.com/chiyoi/trinity/internal/app/aira/handlers/atri"
+	"github.com/chiyoi/trinity/internal/app/aira/handlers/eroira"
 	"github.com/chiyoi/trinity/internal/pkg/logs"
-	atmt2 "github.com/chiyoi/trinity/pkg/atmt"
+	"github.com/chiyoi/trinity/pkg/atmt"
 )
 
-func Server(chanTimestamp chan<- int64) *atmt2.Server {
-	mux := atmt2.NewServeMux()
+func Server(chanTimestamp chan<- int64) *atmt.Server {
+	mux := atmt.NewServeMux()
 	mux.Handle(aira.Aira())
 	mux.Handle(atri.Atri())
 	mux.Handle(eroira.Eroira())
 
-	return &atmt2.Server{
+	return &atmt.Server{
 		Addr:    ":http",
-		Handler: app.LogEvent(mux, chanTimestamp),
+		Handler: handlers.LogEvent(mux, chanTimestamp),
+		ErrorCallback: map[int]func(w http.ResponseWriter, err error){
+			http.StatusInternalServerError: func(w http.ResponseWriter, err error) {
+				logs.Error("aira:", err)
+				http.Error(w, "500 internal server error", http.StatusInternalServerError)
+			},
+			http.StatusBadRequest: func(w http.ResponseWriter, err error) {
+				logs.Warning("aira:", err)
+				http.Error(w, "400 bad request", http.StatusBadRequest)
+			},
+		},
 	}
 }
 
-func StartSrv(srv *atmt2.Server) {
+func StartSrv(srv *atmt.Server) {
 	logs.Info("aira: listening", srv.Addr)
 	logs.Info("アトリ、起動！")
 	err := srv.ListenAndServe()
@@ -37,7 +47,7 @@ func StartSrv(srv *atmt2.Server) {
 	logs.Info(fmt.Sprintf("aria: server at %s closed.", srv.Addr))
 }
 
-func StopSrv(srv *atmt2.Server) {
+func StopSrv(srv *atmt.Server) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {

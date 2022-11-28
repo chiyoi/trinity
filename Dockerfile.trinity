@@ -12,7 +12,7 @@ COPY ./pkg ./pkg
 ARG CGO_ENABLED=0 
 RUN CGO_ENABLED=0 go build -o ./trinity ./cmd/trinity
 
-FROM alpine:3.16
+FROM alpine:3.17
 
 COPY --from=0 /build/trinity /bin/trinity
 

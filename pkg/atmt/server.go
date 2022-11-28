@@ -14,19 +14,21 @@ import (
 type Server struct {
 	Addr string
 
-	Handler Handler
+	Handler       Handler
+	ErrorCallback map[int]func(w http.ResponseWriter, err error)
 
 	httpSrv *http.Server
 }
 
-func internalServerErrorCallback(w http.ResponseWriter, err error) {
-	logs.Error("atmt:", err)
-	http.Error(w, "500 internal server error", http.StatusInternalServerError)
-}
-
-func badRequestCallback(w http.ResponseWriter, err error) {
-	logs.Warning("atmt:", err)
-	http.Error(w, "400 bad request", http.StatusBadRequest)
+var defaultErrorCallback = map[int]func(w http.ResponseWriter, err error){
+	http.StatusInternalServerError: func(w http.ResponseWriter, err error) {
+		logs.Error("atmt:", err)
+		http.Error(w, "500 internal server error", http.StatusInternalServerError)
+	},
+	http.StatusBadRequest: func(w http.ResponseWriter, err error) {
+		logs.Warning("atmt:", err)
+		http.Error(w, "400 bad request", http.StatusBadRequest)
+	},
 }
 
 func (srv *Server) ListenAndServe() (err error) {
@@ -35,6 +37,11 @@ func (srv *Server) ListenAndServe() (err error) {
 			err = fmt.Errorf("atmt: %w", err)
 		}
 	}()
+	for k, cb := range defaultErrorCallback {
+		if _, ok := srv.ErrorCallback[k]; !ok {
+			srv.ErrorCallback[k] = cb
+		}
+	}
 
 	h := srv.Handler
 	if h == nil {
@@ -45,12 +52,12 @@ func (srv *Server) ListenAndServe() (err error) {
 	srv.httpSrv.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		data, err := io.ReadAll(r.Body)
 		if err != nil {
-			internalServerErrorCallback(w, err)
+			srv.ErrorCallback[http.StatusInternalServerError](w, err)
 			return
 		}
 		var req Request
 		if err = json.Unmarshal(data, &req); err != nil {
-			badRequestCallback(w, err)
+			srv.ErrorCallback[http.StatusBadRequest](w, err)
 			return
 		}
 

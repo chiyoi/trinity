@@ -8,14 +8,21 @@ import (
 func main() {
 	rdb, err := maru.OpenRedis()
 	if err != nil {
-		logs.Fatal("trinity", err)
+		logs.Fatal("maru:", err)
 	}
-	ch := make(chan any, 10)
 
-	onebotSrv, atmtSrv := maru.OnebotServer(rdb, ch), maru.AtmtServer(ch)
-	go maru.StartOnebotSrv(onebotSrv)
-	defer maru.StopOnebotSrv(onebotSrv)
-	go maru.StartAtmtSrv(atmtSrv)
-	defer maru.StopAtmtSrv(atmtSrv)
+	if err = maru.RegisterListener(rdb); err != nil {
+		logs.Fatal("maru:", err)
+	}
+	srv := maru.Server(rdb)
+	serveOnebot := maru.OnebotServer(rdb)
+
+	ws, err := maru.DialOnebotEventServer()
+	if err != nil {
+		logs.Fatal("maru:", err)
+	}
+	go serveOnebot(ws)
+	go maru.StartSrv(srv)
+	defer maru.StopSrv(srv)
 	select {}
 }

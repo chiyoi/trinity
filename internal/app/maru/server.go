@@ -17,93 +17,11 @@ import (
 	"github.com/chiyoi/trinity/pkg/onebot"
 	onebot_message "github.com/chiyoi/trinity/pkg/onebot/message"
 	"github.com/chiyoi/trinity/pkg/trinity"
-	"github.com/chiyoi/trinity/pkg/websocket"
+	"github.com/chiyoi/websocket"
 )
 
-func OnebotServer(rdb *redis.Client, chanFromAtmt <-chan onebot_message.Message) *http.Server {
-	selectEvent := func(onebotEvent, atmtEvent <-chan onebot_message.Message) (data []byte, err error) {
-		var msg onebot_message.Message
-		select {
-		case msg = <-onebotEvent:
-		case msg = <-atmtEvent:
-		}
-		done := make(chan struct{})
-		go func() {
-			defer close(done)
-			data, err = ws.Recv()
-		}()
-
-		select {
-		case msg := <-chanFromAtmt:
-			var ids []onebot.UserId
-			ids, err = GetLoggedInList(rdb)
-			if err != nil {
-				return
-			}
-			for _, id := range ids {
-				if err1 := onebot.SendMsg(ws, id, msg); err1 != nil {
-					logs.Warning("maru:", err1)
-					continue
-				}
-			}
-			return
-		case <-done:
-			if err != nil {
-				return
-			}
-			return
-		}
-	}
-	serveWsConnection := func(ws websocket.WebSocket) error {
-		defer func() { _ = ws.Close() }()
-		for {
-			data, err := selectEvent(ws)
-			if err != nil {
-				return err
-			}
-			if len(data) == 0 {
-				continue
-			}
-
-			var ev onebot.Event
-			if err = json.Unmarshal(data, &ev); err != nil {
-				return err
-			}
-			if ev.PostType != onebot.EventMessage {
-				logs.Info("maru: non-message event received.")
-				continue
-			}
-
-			go serveEvent(ev)
-		}
-	}
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		ws, err := websocket.Hijack(w, r)
-		if err != nil {
-			logs.Error("maru:", err)
-			return
-		}
-
-		go func() {
-			defer func() { _ = ws.Close() }()
-			if err := serveWsConnection(ws); true {
-				if cce, ok := err.(websocket.ConnectionCloseError); ok && cce.Code() == websocket.NormalClosure {
-					logs.Info("maru: ws closed.")
-					return
-				}
-				logs.Error(err)
-				return
-			}
-		}()
-	}
-	return &http.Server{
-		Addr:    ":http",
-		Handler: http.HandlerFunc(handler),
-	}
-}
-
-func EventServer(rdb *redis.Client) func(ev onebot.Event) {
-	return func(ev onebot.Event) {
+func OnebotServer(rdb *redis.Client) func(ws websocket.WebSocket) {
+	eventHandler := func(ev onebot.Event) {
 		var msg message.Message
 		for _, m := range ev.Message {
 			switch m.Type {
@@ -123,12 +41,16 @@ func EventServer(rdb *redis.Client) func(ev onebot.Event) {
 		ss := strings.Split(msg.Plaintext(), " ")
 		if len(ss) == 3 && ss[0] == "login" {
 			user, passwd := ss[1], ss[2]
-			Login(rdb, ev.UserId, user, passwd)
+			if err := Login(rdb, ev.UserId, user, passwd); err != nil {
+				logs.Error("maru:", err)
+				return
+			}
 			return
 		}
 
-		auth := GetAuthFromLoggedIn(rdb, ev.UserId)
-		if auth == "" {
+		auth, err := GetAuthFromLoggedIn(rdb, ev.UserId)
+		if err != nil {
+			logs.Warning("maru:", err)
 			return
 		}
 
@@ -136,10 +58,8 @@ func EventServer(rdb *redis.Client) func(ev onebot.Event) {
 			logs.Warning("maru:", err)
 		}
 	}
-}
 
-func OnebotWorker() func(ws websocket.WebSocket, onebotEvent chan<- onebot.Event) {
-	return func(ws websocket.WebSocket, onebotEvent chan<- onebot.Event) {
+	return func(ws websocket.WebSocket) {
 		defer func() {
 			if err := ws.Close(); err != nil {
 				logs.Error("maru:", err)
@@ -150,6 +70,7 @@ func OnebotWorker() func(ws websocket.WebSocket, onebotEvent chan<- onebot.Event
 			if err != nil {
 				if cce, ok := err.(websocket.ConnectionCloseError); ok && cce.Code() == websocket.NormalClosure {
 					logs.Info("maru: ws closed.")
+					return
 				}
 				logs.Error("maru:", err)
 				return
@@ -164,12 +85,12 @@ func OnebotWorker() func(ws websocket.WebSocket, onebotEvent chan<- onebot.Event
 				logs.Info("maru: non-message event received.")
 				continue
 			}
-			onebotEvent <- ev
+			go eventHandler(ev)
 		}
 	}
 }
 
-func AtmtServer(atmtEvent chan<- atmt.Event) *atmt.Server {
+func Server(rdb *redis.Client) *atmt.Server {
 	handler := func(ev atmt.Event) {
 		var msg onebot_message.Message
 		msg.Append(onebot_message.Text(fmt.Sprintf("%s %s", ev.User, ev.Time.Format(time.RFC822))))
@@ -185,22 +106,27 @@ func AtmtServer(atmtEvent chan<- atmt.Event) *atmt.Server {
 				msg.Append(onebot_message.Text("unsupported message type"))
 			}
 		}
-		atmtEvent <- atmt.Event{
-			Time:      time.Time{},
-			User:      "",
-			MessageId: "",
-			Message:   []message.Segment{},
+
+		ids, err := GetLoggedInList(rdb)
+		if err != nil {
+			logs.Error("maru:", err)
+			return
+		}
+
+		for _, id := range ids {
+			if err := OnebotSendMsg(id, msg); err != nil {
+				logs.Error("maru:", err)
+				return
+			}
 		}
 	}
 	return &atmt.Server{
-		Addr: ":8080",
-		Handler: atmt.HandlerFunc(func(ev atmt.Event) {
-			atmtEvent <- ev
-		}),
+		Addr:    ":8080",
+		Handler: atmt.HandlerFunc(handler),
 	}
 }
 
-func StartOnebotSrv(srv *http.Server) {
+func StartSrv(srv *atmt.Server) {
 	logs.Info("maru: listening", srv.Addr)
 	err := srv.ListenAndServe()
 	if err != http.ErrServerClosed {
@@ -210,27 +136,7 @@ func StartOnebotSrv(srv *http.Server) {
 	logs.Info(fmt.Sprintf("maru: server at %s closed.", srv.Addr))
 }
 
-func StopOnebotSrv(srv *http.Server) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		logs.Error(err)
-		return
-	}
-}
-
-func StartAtmtSrv(srv *atmt.Server) {
-	logs.Info("maru: listening", srv.Addr)
-	// TODO: register self to trinity listeners
-	err := srv.ListenAndServe()
-	if err != http.ErrServerClosed {
-		logs.Error(err)
-		return
-	}
-	logs.Info(fmt.Sprintf("maru: server at %s closed.", srv.Addr))
-}
-
-func StopAtmtSrv(srv *atmt.Server) {
+func StopSrv(srv *atmt.Server) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {

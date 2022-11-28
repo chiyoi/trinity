@@ -1,15 +1,13 @@
 package onebot
 
 import (
-	"encoding/json"
-
 	"github.com/chiyoi/trinity/pkg/onebot/message"
 )
 
 type Request struct {
-	Action Action         `json:"action"`
-	Params map[string]any `json:"params"`
-	Echo   string         `json:"echo"`
+	Action Action `json:"action"`
+	Params any    `json:"params"`
+	Echo   string `json:"echo"`
 }
 type Action string
 
@@ -31,6 +29,14 @@ const (
 	ActionGetLoginInfo Action = "get_login_info"
 )
 
+type ReqParamsSendMsg struct {
+	MessageType EventMessageType `json:"message_type"`
+	UserId      UserId           `json:"user_id"`
+	GroupId     GroupId          `json:"group_id"`
+	Message     message.Message  `json:"message"`
+	AutoEscape  bool             `json:"auto_escape"`
+}
+
 type Status string
 
 const (
@@ -47,19 +53,19 @@ const (
 	// other retcode: failed
 )
 
-type Response struct {
-	Status  Status          `json:"status"`
-	Retcode Retcode         `json:"retcode"`
-	Msg     string          `json:"msg"`
-	Wording string          `json:"wording"`
-	Data    json.RawMessage `json:"data"`
-	Echo    string          `json:"echo"`
+type Response[Data RespData] struct {
+	Status  Status  `json:"status"`
+	Retcode Retcode `json:"retcode"`
+	Msg     string  `json:"msg"`
+	Wording string  `json:"wording"`
+	Data    Data    `json:"data"`
+	Echo    string  `json:"echo"`
 }
 
-type RequestDataSendMsg struct {
-	MessageType EventMessageType `json:"message_type"`
-	UserId      UserId           `json:"user_id"`
-	GroupId     GroupId          `json:"group_id"`
-	Message     message.Message  `json:"message"`
-	AutoEscape  bool             `json:"auto_escape"`
+type RespData interface {
+	RespDataSendMsg
+}
+
+type RespDataSendMsg struct {
+	MessageId MessageId `json:"message_id"`
 }

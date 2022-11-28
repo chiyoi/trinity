@@ -81,3 +81,10 @@ type RespDataQueryMessageTimeRange struct {
 type RespDataCacheFile struct {
 	SasURL string `json:"sas_url"`
 }
+
+type RespData interface {
+	RespDataPostMessage |
+		RespDataGetMessage |
+		RespDataQueryMessageTimeRange |
+		RespDataCacheFile
+}

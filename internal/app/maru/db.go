@@ -1,9 +1,12 @@
 package maru
 
-import "github.com/go-redis/redis/v8"
+import (
+	"github.com/chiyoi/trinity/internal/app/maru/config"
+	"github.com/go-redis/redis/v8"
+)
 
 func OpenRedis() (rdb *redis.Client, err error) {
-	opt, err := GetConfig[*redis.Options]("RedisOptions")
+	opt, err := config.Get[*redis.Options]("RedisOptions")
 	if err != nil {
 		return
 	}

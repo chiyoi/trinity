@@ -10,14 +10,3 @@ type Request struct {
 	MessageId string          `json:"message_id"`
 	Message   message.Message `json:"message"`
 }
-
-type Response struct {
-	StatusCode StatusCode
-}
-
-type StatusCode uint8
-
-const (
-	StatusOK StatusCode = iota
-	StatusFailed
-)

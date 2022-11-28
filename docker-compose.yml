@@ -11,7 +11,7 @@ services:
     networks:
       - trinity_network
       - neko03_network
-    restart: always
+    restart: unless-stopped
 
   aira:
     build:
@@ -22,7 +22,7 @@ services:
     hostname: aira
     networks:
       - trinity_network
-    restart: always
+    restart: unless-stopped
 
   maru:
     build:
@@ -33,11 +33,31 @@ services:
     hostname: maru
     networks:
       - trinity_network
-    restart: always
+    restart: unless-stopped
+    depends_on:
+      - gocq
+
+  gocq:
+    build:
+      context: .
+      dockerfile: Dockerfile.gocq
+    image: chiyoi/gocq
+    container_name: gocq
+    hostname: gocq
+    networks:
+      - trinity_network
+    volumes:
+      - gocq-neko0001:/gocq/neko0001
+    restart: unless-stopped
 
 networks:
   trinity-network:
     name: trinity_network
   neko03-network:
     name: neko03_network
+    external: true
+
+volumes:
+  gocq-neko0001:
+    name: gocq-neko0001
     external: true

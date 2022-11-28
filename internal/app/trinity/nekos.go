@@ -4,26 +4,38 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 
+	"github.com/chiyoi/trinity/internal/app/trinity/config"
 	"github.com/chiyoi/trinity/internal/pkg/logs"
 )
 
+var (
+	nekos = config.Get[string]("MongodbCollectionNekos")
+)
+
 func AddNeko(db *mongo.Database, user, passwd string) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("add neko: %w", err)
+		}
+	}()
+
 	if len(user) == 0 || len(passwd) == 0 {
-		logs.Warning("trinity: empty neko~")
+		logs.Warning("trinity: zero value neko~")
 		return
 	}
 
-	coll := db.Collection(mongodbCollectionNekos)
+	coll := db.Collection(nekos)
 	bg := context.Background()
 
 	sum := sha256.Sum256([]byte(passwd))
 	token := base64.StdEncoding.EncodeToString(sum[:])
 
-	ctx, cancel := context.WithTimeout(bg, dbOperationTimeout)
+	ctx, cancel := context.WithTimeout(bg, reqTimeout)
 	defer cancel()
 	if _, err = coll.InsertOne(ctx, dUser{
 		Name:  user,
@@ -33,20 +45,25 @@ func AddNeko(db *mongo.Database, user, passwd string) (err error) {
 			logs.Warning("trinity: duplicated neko~")
 			return
 		}
-		logs.Error("trinity: insert neko error:", err)
 		return
 	}
 	return
 }
 
 func UpdateNeko(db *mongo.Database, user, passwd string) (err error) {
-	coll := db.Collection(mongodbCollectionNekos)
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("update neko: %w", err)
+		}
+	}()
+
+	coll := db.Collection(nekos)
 	bg := context.Background()
 
 	sum := sha256.Sum256([]byte(passwd))
 	token := base64.StdEncoding.EncodeToString(sum[:])
 
-	ctx, cancel := context.WithTimeout(bg, dbOperationTimeout)
+	ctx, cancel := context.WithTimeout(bg, reqTimeout)
 	defer cancel()
 	res, err := coll.UpdateOne(ctx, dUser{
 		Name: user,
@@ -54,7 +71,6 @@ func UpdateNeko(db *mongo.Database, user, passwd string) (err error) {
 		Token: token,
 	}})
 	if err != nil {
-		logs.Error("trinity: update neko error:", err)
 		return
 	}
 	if res.MatchedCount == 0 {
@@ -64,16 +80,21 @@ func UpdateNeko(db *mongo.Database, user, passwd string) (err error) {
 }
 
 func RemoveNeko(db *mongo.Database, user string) (err error) {
-	coll := db.Collection(mongodbCollectionNekos)
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("remove neko: %w", err)
+		}
+	}()
+
+	coll := db.Collection(nekos)
 	bg := context.Background()
 
-	ctx, cancel := context.WithTimeout(bg, dbOperationTimeout)
+	ctx, cancel := context.WithTimeout(bg, reqTimeout)
 	defer cancel()
 	res, err := coll.DeleteOne(ctx, dUser{
 		Name: user,
 	})
 	if err != nil {
-		logs.Error("trinity: delete neko error:", err)
 		return
 	}
 	if res.DeletedCount == 0 {

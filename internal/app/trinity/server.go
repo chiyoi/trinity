@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chiyoi/trinity/internal/app/trinity/config"
 	"github.com/chiyoi/trinity/internal/pkg/logs"
 
 	"github.com/go-redis/redis/v8"
@@ -43,10 +44,10 @@ func Server(mongodb *mongo.Database, rdb *redis.Client) *http.Server {
 	bg := context.Background()
 
 	messageCollection, nekoCollection :=
-		mongodb.Collection(mongodbCollectionMessages),
-		mongodb.Collection(mongodbCollectionNekos)
+		mongodb.Collection(config.Get[string]("MongodbCollectionMessages")),
+		mongodb.Collection(nekos)
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		now := time.Now().Unix()
+		now := time.Now()
 
 		user, ok := verifyAuth(bg, w, r, nekoCollection)
 		if !ok {
@@ -95,7 +96,7 @@ func verifyAuth(baseCtx context.Context, w http.ResponseWriter, r *http.Request,
 	user, token := t[0], t[1]
 
 	var res dUser
-	ctx, cancel := context.WithTimeout(baseCtx, dbOperationTimeout)
+	ctx, cancel := context.WithTimeout(baseCtx, reqTimeout)
 	defer cancel()
 	err = coll.FindOne(ctx, bson.M{"name": user}).Decode(&res)
 	if err != nil {

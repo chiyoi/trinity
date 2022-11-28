@@ -12,7 +12,7 @@ func main() {
 	}
 	rdb, err := trinity.OpenRedis()
 	if err != nil {
-		logs.Fatal("trinity", err)
+		logs.Fatal("trinity:", err)
 	}
 
 	srv := trinity.Server(mongodb, rdb)

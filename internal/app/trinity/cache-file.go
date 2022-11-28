@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
-	"github.com/chiyoi/trinity/internal/pkg/logs"
+	"github.com/chiyoi/trinity/internal/app/trinity/config"
 )
 
 var (
@@ -20,48 +20,25 @@ var (
 )
 
 const (
-	simpleRequestTimeout = time.Second * 10
-
 	fileCacheSasExpireDelay = time.Hour * 24 * 365 * 10
 )
 
-var (
-	fileCachePermission = azblob.BlobSASPermissions{
-		Read:   true,
-		Create: true,
-		Write:  true,
-		Delete: true,
-	}
-)
-
 func init() {
-	accountName, err := GetConfig[string]("AzureStorageAccount")
-	if err != nil {
-		return
-	}
-	accountKey, err := GetConfig[string]("AzureStorageKey")
-	if err != nil {
-		return
-	}
+	accountName, accountKey :=
+		config.Get[string]("AzureStorageAccount"),
+		config.Get[string]("AzureStorageKey")
 	u, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net", accountName))
 	if err != nil {
 		return
 	}
-
 	if credential, err = azblob.NewSharedKeyCredential(accountName, accountKey); err != nil {
 		return
 	}
 	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
-
 	serviceUrl := azblob.NewServiceURL(*u, pipeline)
 
-	fileCacheContainer, err := GetConfig[string]("FileCacheContainer")
-	if err != nil {
-		logs.Fatal(err)
-	}
-
-	containerName = fileCacheContainer
-	containerUrl = serviceUrl.NewContainerURL(fileCacheContainer)
+	containerName = config.Get[string]("FileCacheContainer")
+	containerUrl = serviceUrl.NewContainerURL(containerName)
 }
 
 func handleCacheFile(baseCtx context.Context, w http.ResponseWriter, req Request) {
@@ -72,7 +49,7 @@ func handleCacheFile(baseCtx context.Context, w http.ResponseWriter, req Request
 	blobName := reqData.Sha256SumHex
 	blobUrl := containerUrl.NewBlobURL(blobName)
 
-	ctx, cancel := context.WithTimeout(context.Background(), simpleRequestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
 	defer cancel()
 	if _, err := blobUrl.GetProperties(ctx, azblob.BlobAccessConditions{}, azblob.ClientProvidedKeyOptions{}); err != nil {
 		if responseError, ok := err.(azblob.ResponseError); !ok || responseError.Response().StatusCode == http.StatusNotFound {
@@ -82,9 +59,14 @@ func handleCacheFile(baseCtx context.Context, w http.ResponseWriter, req Request
 	}
 
 	sas := &azblob.BlobSASSignatureValues{
-		StartTime:     time.Now().UTC(),
-		ExpiryTime:    time.Now().UTC().Add(fileCacheSasExpireDelay),
-		Permissions:   fileCachePermission.String(),
+		StartTime:  time.Now().UTC(),
+		ExpiryTime: time.Now().UTC().Add(fileCacheSasExpireDelay),
+		Permissions: azblob.BlobSASPermissions{
+			Read:   true,
+			Create: true,
+			Write:  true,
+			Delete: true,
+		}.String(),
 		ContainerName: containerName,
 		BlobName:      blobName,
 	}

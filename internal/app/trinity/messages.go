@@ -4,20 +4,24 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
+	"github.com/chiyoi/trinity/internal/app/trinity/client"
+	"github.com/chiyoi/trinity/pkg/atmt"
 	"github.com/go-redis/redis/v8"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func handlePostMessage(baseCtx context.Context, w http.ResponseWriter, req Request, coll *mongo.Collection, rdb *redis.Client, now int64, user string) {
+func handlePostMessage(baseCtx context.Context, w http.ResponseWriter, req Request, coll *mongo.Collection, rdb *redis.Client, now time.Time, user string) {
 	var reqData ReqDataPostMessage
 	if err := json.Unmarshal([]byte(req.Data), &reqData); err != nil {
 		badRequestCallback(w, err)
 		return
 	}
 
+	unixNow := now.Unix()
 	id, err := postMessage(baseCtx, coll, dMessage{
-		Time:    &now,
+		Time:    &unixNow,
 		User:    user,
 		Message: reqData.Message,
 	})
@@ -26,7 +30,12 @@ func handlePostMessage(baseCtx context.Context, w http.ResponseWriter, req Reque
 		return
 	}
 
-	if err = pushMsgToListeners(baseCtx, rdb, now, user, id, reqData.Message); err != nil {
+	if err = client.PushEventToListeners(baseCtx, rdb, atmt.Event{
+		Time:      now,
+		User:      user,
+		MessageId: id,
+		Message:   reqData.Message,
+	}); err != nil {
 		internalServerErrorCallback(w, err)
 		return
 	}

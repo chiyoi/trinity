@@ -15,7 +15,7 @@ RUN CGO_ENABLED=0 go build -o ./aira ./cmd/aira
 FROM alpine:3.17
 
 COPY --from=0 /build/aria /bin/aira
-COPY ./assets /aira/assets
+COPY ./assets/aira /aira/assets
 
 EXPOSE 80
 

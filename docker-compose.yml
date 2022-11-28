@@ -51,9 +51,9 @@ services:
     restart: unless-stopped
 
 networks:
-  trinity-network:
+  trinity_network:
     name: trinity_network
-  neko03-network:
+  neko03_network:
     name: neko03_network
     external: true
 

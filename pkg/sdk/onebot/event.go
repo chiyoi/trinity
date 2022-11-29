@@ -3,7 +3,7 @@ package onebot
 import (
 	"time"
 
-	"github.com/chiyoi/trinity/pkg/onebot/message"
+	"github.com/chiyoi/trinity/pkg/sdk/onebot/message"
 )
 
 type EventType string

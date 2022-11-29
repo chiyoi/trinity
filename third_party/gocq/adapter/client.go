@@ -1,4 +1,4 @@
-package maru
+package adapter
 
 import (
 	"context"
@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/chiyoi/trinity/internal/app/maru/config"
-	"github.com/chiyoi/trinity/pkg/onebot"
-	"github.com/chiyoi/trinity/pkg/trinity"
+	"github.com/chiyoi/trinity/pkg/sdk/onebot"
+	"github.com/chiyoi/trinity/pkg/sdk/trinity"
+	"github.com/chiyoi/trinity/third_party/gocq/adapter/config"
 	"github.com/chiyoi/websocket"
 	"github.com/go-redis/redis/v8"
 )

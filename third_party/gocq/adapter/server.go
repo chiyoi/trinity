@@ -1,4 +1,4 @@
-package maru
+package adapter
 
 import (
 	"context"
@@ -14,9 +14,9 @@ import (
 	"github.com/chiyoi/trinity/internal/pkg/logs"
 	"github.com/chiyoi/trinity/pkg/atmt"
 	"github.com/chiyoi/trinity/pkg/atmt/message"
-	"github.com/chiyoi/trinity/pkg/onebot"
-	onebot_message "github.com/chiyoi/trinity/pkg/onebot/message"
-	"github.com/chiyoi/trinity/pkg/trinity"
+	"github.com/chiyoi/trinity/pkg/sdk/onebot"
+	onebot_message "github.com/chiyoi/trinity/pkg/sdk/onebot/message"
+	"github.com/chiyoi/trinity/pkg/sdk/trinity"
 	"github.com/chiyoi/websocket"
 )
 

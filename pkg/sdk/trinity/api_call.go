@@ -55,7 +55,7 @@ func CallApiCtx[Data RespData](ctx context.Context, url string, auth string, req
 		return
 	}
 
-	if b, err = io.ReadAll(httpReq.Body); err != nil {
+	if b, err = io.ReadAll(httpResp.Body); err != nil {
 		return
 	}
 	if err = json.Unmarshal(b, &resp); err != nil {

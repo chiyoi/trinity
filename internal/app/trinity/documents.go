@@ -18,7 +18,7 @@ type dUser struct {
 
 type dMessage struct {
 	Id      string          `bson:"_id,omitempty"`
-	Time    *int64          `bson:"time,omitempty"`
+	Time    int64           `bson:"time"`
 	User    string          `bson:"user,omitempty"`
 	Message message.Message `bson:"message,omitempty"`
 }

@@ -1,7 +1,7 @@
-package maru
+package adapter
 
 import (
-	"github.com/chiyoi/trinity/internal/app/maru/config"
+	"github.com/chiyoi/trinity/third_party/gocq/adapter/config"
 	"github.com/go-redis/redis/v8"
 )
 

@@ -25,7 +25,7 @@ func internalServerErrorCallback(w http.ResponseWriter, err error) {
 }
 
 func badRequestCallback(w http.ResponseWriter, err error) {
-	logs.Error("trinity:", err)
+	logs.Warning("trinity:", err)
 	http.Error(w, "400 bad request", http.StatusBadRequest)
 }
 
@@ -42,18 +42,16 @@ func forbiddenCallback(w http.ResponseWriter) {
 
 func Server(mongodb *mongo.Database, rdb *redis.Client) *http.Server {
 	bg := context.Background()
-
 	messageCollection, nekoCollection :=
 		mongodb.Collection(config.Get[string]("MongodbCollectionMessages")),
 		mongodb.Collection(nekos)
+
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		now := time.Now()
-
 		user, ok := verifyAuth(bg, w, r, nekoCollection)
 		if !ok {
 			return
 		}
-
 		req, ok := parseBody(w, r)
 		if !ok {
 			return
@@ -69,7 +67,7 @@ func Server(mongodb *mongo.Database, rdb *redis.Client) *http.Server {
 		case ActionCacheFile:
 			handleCacheFile(bg, w, req)
 		default:
-			http.Error(w, "400 bad request", http.StatusBadRequest)
+			badRequestCallback(w, errors.New("invalid action"))
 			return
 		}
 	}
@@ -83,13 +81,11 @@ func verifyAuth(baseCtx context.Context, w http.ResponseWriter, r *http.Request,
 	auth := strings.Split(r.Header.Get("Authorization"), " ")
 	if len(auth) != 2 || strings.ToLower(auth[0]) != "basic" {
 		unauthorizedCallback(w, r)
-		logs.Debug("1")
 		ok = false
 		return
 	}
 	b, err := base64.RawStdEncoding.DecodeString(auth[1])
 	if err != nil {
-		logs.Debug("2")
 		unauthorizedCallback(w, r)
 		ok = false
 		return
@@ -119,7 +115,7 @@ func verifyAuth(baseCtx context.Context, w http.ResponseWriter, r *http.Request,
 	return
 }
 
-func parseBody(w http.ResponseWriter, r *http.Request) (api Request, ok bool) {
+func parseBody(w http.ResponseWriter, r *http.Request) (req Request, ok bool) {
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		internalServerErrorCallback(w, err)
@@ -127,7 +123,7 @@ func parseBody(w http.ResponseWriter, r *http.Request) (api Request, ok bool) {
 		return
 	}
 
-	if err = json.Unmarshal(data, &api); err != nil {
+	if err = json.Unmarshal(data, &req); err != nil {
 		badRequestCallback(w, err)
 		ok = false
 		return

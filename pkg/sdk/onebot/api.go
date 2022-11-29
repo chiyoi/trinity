@@ -1,7 +1,7 @@
 package onebot
 
 import (
-	"github.com/chiyoi/trinity/pkg/onebot/message"
+	"github.com/chiyoi/trinity/pkg/sdk/onebot/message"
 )
 
 type Request struct {

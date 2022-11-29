@@ -3,7 +3,7 @@ package trinity
 import (
 	"net/url"
 
-	"github.com/chiyoi/trinity/pkg/trinity"
+	"github.com/chiyoi/trinity/pkg/sdk/trinity"
 	"github.com/go-redis/redis/v8"
 )
 

@@ -14,7 +14,8 @@ type Request struct {
 type Action uint8
 
 const (
-	ActionPostMessage Action = iota
+	invalid Action = iota
+	ActionPostMessage
 	ActionGetMessage
 	ActionQueryMessageIdsTimeRange
 

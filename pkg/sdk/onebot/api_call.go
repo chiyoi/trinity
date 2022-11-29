@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/chiyoi/trinity/pkg/onebot/message"
+	"github.com/chiyoi/trinity/pkg/sdk/onebot/message"
 )
 
 type ApiCallError struct {

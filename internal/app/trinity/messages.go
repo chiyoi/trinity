@@ -19,9 +19,8 @@ func handlePostMessage(baseCtx context.Context, w http.ResponseWriter, req Reque
 		return
 	}
 
-	unixNow := now.Unix()
 	id, err := postMessage(baseCtx, coll, dMessage{
-		Time:    &unixNow,
+		Time:    now.Unix(),
 		User:    user,
 		Message: reqData.Message,
 	})
@@ -71,7 +70,7 @@ func handleGetMessage(baseCtx context.Context, w http.ResponseWriter, req Reques
 	}
 
 	respData := RespDataGetMessage{
-		Time:      *doc.Time,
+		Time:      doc.Time,
 		User:      doc.User,
 		MessageId: doc.Id,
 		Message:   doc.Message,

@@ -2,7 +2,7 @@ FROM alpine:3.17
 
 RUN apk add --no-cache ffmpeg
 
-COPY ./third_party/gocq/go-cqhttp_linux_amd64/go-cqhttp /bin/go-cqhttp
+COPY ./go-cqhttp_linux_amd64/go-cqhttp /bin/go-cqhttp
 
 EXPOSE 80
 

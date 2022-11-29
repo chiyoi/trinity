@@ -27,30 +27,28 @@ services:
       - trinity_network
 
   # maru:
-    # build:
-      # context: .
-      # dockerfile: Dockerfile.maru
-    # image: chiyoi/trinity-maru
-    # container_name: maru
-    # hostname: maru
-    # restart: always
-    # networks:
-      # - trinity_network
-    # depends_on:
-      # - gocq
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.maru
+  #   image: chiyoi/trinity-maru
+  #   container_name: maru
+  #   hostname: maru
+  #   # restart: always
+  #   networks:
+  #     - trinity_network
+  #   depends_on:
+  #     - gocq
 
   # gocq:
-    # build:
-      # context: .
-      # dockerfile: Dockerfile.gocq
-    # image: chiyoi/gocq
-    # container_name: gocq
-    # hostname: gocq
-    # restart: always
-    # networks:
-      # - trinity_network
-    # volumes:
-      # - gocq-neko0001:/gocq
+  #   build: ./third_party/gocq
+  #   image: chiyoi/gocq
+  #   container_name: gocq
+  #   hostname: gocq
+  #   # restart: always
+  #   networks:
+  #     - trinity_network
+  #   volumes:
+  #     - gocq-neko0001:/gocq
 
 networks:
   trinity_network:
@@ -59,7 +57,7 @@ networks:
     name: neko03_network
     external: true
 
-volumes:
-  gocq-neko0001:
-    name: gocq-neko0001
-    external: true
+# volumes:
+#   gocq-neko0001:
+#     name: gocq-neko0001
+#     external: true

@@ -13,7 +13,7 @@ import (
 	"github.com/chiyoi/trinity/internal/app/aira/config"
 	"github.com/chiyoi/trinity/internal/pkg/logs"
 	"github.com/chiyoi/trinity/pkg/atmt"
-	"github.com/chiyoi/trinity/pkg/trinity"
+	"github.com/chiyoi/trinity/pkg/sdk/trinity"
 )
 
 var (

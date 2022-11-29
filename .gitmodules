@@ -1,3 +1,6 @@
 [submodule "pkg/websocket"]
 	path = pkg/websocket
 	url = https://github.com/chiyoi/websocket
+[submodule "third_party/gocq"]
+	path = third_party/gocq
+	url = https://github.com/chiyoi/gocq.git

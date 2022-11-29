@@ -1,3 +1,4 @@
 assets
 .vscode
 .idea
+internal/app/**/internal

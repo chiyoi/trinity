@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"time"
 
@@ -18,30 +17,13 @@ import (
 )
 
 var (
-	trinityUrl string
-	auth       string
+	serviceURL = config.Get[string]("ServiceURL")
 
-	serviceUrl        string
-	redisKeyListeners string
+	trinityUrl = config.Get[string]("TrinityURL")
+	auth       = config.Get[string]("TrinityAccessToken")
+
+	redisKeyListeners = config.Get[string]("RedisKeyListeners")
 )
-
-func init() {
-	var err error
-	if trinityUrl, err = config.Get[string]("TrinityURL"); err != nil {
-		logs.Fatal(err)
-	}
-
-	if auth, err = config.Get[string]("TrinityAccessToken"); err != nil {
-		logs.Fatal(err)
-	}
-
-	if serviceUrl, err = config.Get[string]("ServiceURL"); err != nil {
-		logs.Fatal(err)
-	}
-	if redisKeyListeners, err = config.Get[string]("RedisKeyListeners"); err != nil {
-		logs.Fatal(err)
-	}
-}
 
 func PostMessage(a ...any) {
 	if _, err := trinity.PostMessage(trinityUrl, auth, a...); err != nil {
@@ -57,30 +39,31 @@ func CacheFile(data []byte) (sasUrl string, err error) {
 func RegisterListener(rdb *redis.Client) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	return rdb.SAdd(ctx, redisKeyListeners, serviceUrl).Err()
+	return rdb.SAdd(ctx, redisKeyListeners, serviceURL).Err()
 }
 
-func EventSynchronizer(chanTimestamp chan int64, rdb *redis.Client) (err error) {
+func EventSynchronizer(timestampChannel chan int64, rdb *redis.Client) (err error) {
 	timestamp := time.Now().Unix()
 	for {
 		select {
-		case timestamp = <-chanTimestamp:
+		case timestamp = <-timestampChannel:
 			continue
 		case <-time.After(time.Second * 10):
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
-		b := rdb.SIsMember(ctx, redisKeyListeners, serviceUrl)
-		if rdbErr := b.Err(); rdbErr != nil || b.Val() {
-			if nErr, ok := rdbErr.(net.Error); ok && nErr.Timeout() {
-				continue
-			}
-			return rdbErr
+		cmd := rdb.SIsMember(ctx, redisKeyListeners, serviceURL)
+		if err = cmd.Err(); err != nil {
+			return
 		}
+		if cmd.Val() {
+			continue
+		}
+
 		ctx, cancel = context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
-		if err = rdb.SAdd(ctx, redisKeyListeners, serviceUrl).Err(); err != nil {
+		if err = rdb.SAdd(ctx, redisKeyListeners, serviceURL).Err(); err != nil {
 			return
 		}
 

@@ -10,6 +10,6 @@ func main() {
 	if err != nil {
 		logs.Fatal("update neko:", err)
 	}
-	trinity.UpdateNeko(db, "aira", "Neko03Aira@trinity")
+	trinity.UpdateNeko(db, "chiyoi", "Chiyoi@trinity")
 	logs.Info("completed")
 }

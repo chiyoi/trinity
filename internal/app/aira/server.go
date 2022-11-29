@@ -37,11 +37,10 @@ func Server(chanTimestamp chan<- int64) *atmt.Server {
 }
 
 func StartSrv(srv *atmt.Server) {
-	logs.Info("aira: listening", srv.Addr)
 	logs.Info("アトリ、起動！")
 	err := srv.ListenAndServe()
 	if err != http.ErrServerClosed {
-		logs.Error(err)
+		logs.Error("aira:", err)
 		return
 	}
 	logs.Info(fmt.Sprintf("aria: server at %s closed.", srv.Addr))

@@ -8,10 +8,12 @@ services:
     image: chiyoi/trinity
     container_name: trinity
     hostname: trinity
+    # restart: always
     networks:
       - trinity_network
       - neko03_network
-    restart: unless-stopped
+    ports:
+      - 3333:80
 
   aira:
     build:
@@ -20,35 +22,35 @@ services:
     image: chiyoi/trinity-aira
     container_name: aira
     hostname: aira
+    # restart: always
     networks:
       - trinity_network
-    restart: unless-stopped
 
-  maru:
-    build:
-      context: .
-      dockerfile: Dockerfile.maru
-    image: chiyoi/trinity-maru
-    container_name: maru
-    hostname: maru
-    networks:
-      - trinity_network
-    restart: unless-stopped
-    depends_on:
-      - gocq
+  # maru:
+    # build:
+      # context: .
+      # dockerfile: Dockerfile.maru
+    # image: chiyoi/trinity-maru
+    # container_name: maru
+    # hostname: maru
+    # restart: always
+    # networks:
+      # - trinity_network
+    # depends_on:
+      # - gocq
 
-  gocq:
-    build:
-      context: .
-      dockerfile: Dockerfile.gocq
-    image: chiyoi/gocq
-    container_name: gocq
-    hostname: gocq
-    networks:
-      - trinity_network
-    volumes:
-      - gocq-neko0001:/gocq/neko0001
-    restart: unless-stopped
+  # gocq:
+    # build:
+      # context: .
+      # dockerfile: Dockerfile.gocq
+    # image: chiyoi/gocq
+    # container_name: gocq
+    # hostname: gocq
+    # restart: always
+    # networks:
+      # - trinity_network
+    # volumes:
+      # - gocq-neko0001:/gocq
 
 networks:
   trinity_network:

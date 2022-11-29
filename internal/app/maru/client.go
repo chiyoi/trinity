@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/chiyoi/trinity/internal/app/maru/config"
-	"github.com/chiyoi/trinity/internal/pkg/logs"
 	"github.com/chiyoi/trinity/pkg/onebot"
 	"github.com/chiyoi/trinity/pkg/trinity"
 	"github.com/chiyoi/websocket"
@@ -15,32 +14,15 @@ import (
 )
 
 var (
-	trinityUrl string
-	onebotUrl  string
+	trinityUrl = config.Get[string]("TrinityURL")
+	onebotUrl  = config.Get[string]("OnebotURL")
 
-	redisKeyUsersLoggedIn string
-	redisKeyListeners     string
+	redisKeyUsersLoggedIn = config.Get[string]("RedisKeyUsersLoggedIn")
+	redisKeyListeners     = config.Get[string]("RedisKeyListeners")
 )
 
-func init() {
-	var err error
-	if trinityUrl, err = config.Get[string]("TrinityURL"); err != nil {
-		logs.Fatal("maru:", err)
-	}
-	if onebotUrl, err = config.Get[string]("OnebotURL"); err != nil {
-		logs.Fatal("maru:", err)
-	}
-
-	if redisKeyUsersLoggedIn, err = config.Get[string]("RedisKeyUsersLoggedIn"); err != nil {
-		logs.Fatal("maru:", err)
-	}
-	if redisKeyListeners, err = config.Get[string]("RedisKeyListeners"); err != nil {
-		logs.Fatal("maru:", err)
-	}
-}
-
 func DialOnebotEventServer() (ws websocket.WebSocket, err error) {
-	onebotEventUrl, err := config.Get[string]("OnebotEventURL")
+	onebotEventUrl, err := config.GetErr[string]("OnebotEventURL")
 	if err != nil {
 		return
 	}
@@ -103,7 +85,7 @@ func RegisterListener(rdb *redis.Client) (err error) {
 			err = fmt.Errorf("register listener: %w", err)
 		}
 	}()
-	serviceUrl, err := config.Get[string]("ServiceURL")
+	serviceUrl, err := config.GetErr[string]("ServiceURL")
 	if err != nil {
 		return
 	}

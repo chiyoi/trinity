@@ -83,11 +83,13 @@ func verifyAuth(baseCtx context.Context, w http.ResponseWriter, r *http.Request,
 	auth := strings.Split(r.Header.Get("Authorization"), " ")
 	if len(auth) != 2 || strings.ToLower(auth[0]) != "basic" {
 		unauthorizedCallback(w, r)
+		logs.Debug("1")
 		ok = false
 		return
 	}
 	b, err := base64.RawStdEncoding.DecodeString(auth[1])
 	if err != nil {
+		logs.Debug("2")
 		unauthorizedCallback(w, r)
 		ok = false
 		return

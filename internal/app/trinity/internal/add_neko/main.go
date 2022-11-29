@@ -15,4 +15,4 @@ func main() {
 }
 
 // chiyoi:Chiyoi@Neko03Trinity
-// aira:Neko03Aira
+// aira:Neko03Aira@trinity

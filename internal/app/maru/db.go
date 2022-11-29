@@ -6,7 +6,7 @@ import (
 )
 
 func OpenRedis() (rdb *redis.Client, err error) {
-	opt, err := config.Get[*redis.Options]("RedisOptions")
+	opt, err := config.GetErr[*redis.Options]("RedisOptions")
 	if err != nil {
 		return
 	}

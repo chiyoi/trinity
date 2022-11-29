@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	urlpkg "net/url"
+	"reflect"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
 
@@ -165,20 +166,10 @@ func CacheFileCtx(ctx context.Context, url string, auth string, data []byte) (sa
 		return
 	}
 
-	if func() bool {
-		for i, b := range properties.ContentMD5() {
-			if b != md5Sum[i] {
-				return false
-			}
-
+	if !reflect.DeepEqual(md5Sum, properties.ContentMD5()) {
+		if _, err = azblob.UploadBufferToBlockBlob(ctx, data, blockBlobUrl, azblob.UploadToBlockBlobOptions{}); err != nil {
+			return
 		}
-		return true
-	}() {
-		return
-	}
-
-	if _, err = azblob.UploadBufferToBlockBlob(ctx, data, blockBlobUrl, azblob.UploadToBlockBlobOptions{}); err != nil {
-		return
 	}
 	return
 }

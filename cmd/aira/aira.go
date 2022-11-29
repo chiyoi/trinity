@@ -11,14 +11,16 @@ func main() {
 	if err != nil {
 		logs.Fatal("aira:", err)
 	}
-	client.RegisterListener(rdb)
-	chanTimestamp := make(chan int64, 1)
+	if err = client.RegisterListener(rdb); err != nil {
+		logs.Fatal("aira:", err)
+	}
+	timestampChannel := make(chan int64, 1)
 	go func() {
-		if err := client.EventSynchronizer(chanTimestamp, rdb); err != nil {
+		if err := client.EventSynchronizer(timestampChannel, rdb); err != nil {
 			logs.Fatal("aira:", err)
 		}
 	}()
-	srv := aira.Server(chanTimestamp)
+	srv := aira.Server(timestampChannel)
 	go aira.StartSrv(srv)
 	defer aira.StopSrv(srv)
 	select {}

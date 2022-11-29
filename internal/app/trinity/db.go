@@ -3,6 +3,7 @@ package trinity
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/chiyoi/trinity/internal/app/trinity/config"
@@ -22,14 +23,14 @@ func OpenMongo() (db *mongo.Database, err error) {
 		}
 	}()
 	bg := context.Background()
-	mongodbUri, err := config.GetErr[string]("MongodbURI")
+	mongodbUri, err := config.GetErr[url.URL]("MongodbURI")
 	if err != nil {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(bg, reqTimeout)
 	defer cancel()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongodbUri))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongodbUri.String()))
 	if err != nil {
 		return
 	}

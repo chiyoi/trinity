@@ -48,8 +48,7 @@ func (srv *Server) ListenAndServe() (err error) {
 		h = DefaultServeMux
 	}
 
-	srv.httpSrv.Addr = srv.Addr
-	srv.httpSrv.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	httpHandler := func(w http.ResponseWriter, r *http.Request) {
 		data, err := io.ReadAll(r.Body)
 		if err != nil {
 			srv.ErrorCallback[http.StatusInternalServerError](w, err)
@@ -62,13 +61,17 @@ func (srv *Server) ListenAndServe() (err error) {
 		}
 
 		ev := Event{
-			time.Unix(int64(req.Time), 0),
+			time.Unix(req.Time, 0),
 			req.User,
 			req.MessageId,
 			req.Message,
 		}
 		go h.ServeEvent(ev)
-	})
+	}
+	srv.httpSrv = &http.Server{
+		Addr:    srv.Addr,
+		Handler: http.HandlerFunc(httpHandler),
+	}
 
 	return srv.httpSrv.ListenAndServe()
 }

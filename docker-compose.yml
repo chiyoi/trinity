@@ -36,19 +36,6 @@ services:
   #   # restart: always
   #   networks:
   #     - trinity_network
-  #   depends_on:
-  #     - gocq
-
-  # gocq:
-  #   build: ./third_party/gocq
-  #   image: chiyoi/gocq
-  #   container_name: gocq
-  #   hostname: gocq
-  #   # restart: always
-  #   networks:
-  #     - trinity_network
-  #   volumes:
-  #     - gocq-neko0001:/gocq
 
 networks:
   trinity_network:
@@ -56,8 +43,3 @@ networks:
   neko03_network:
     name: neko03_network
     external: true
-
-# volumes:
-#   gocq-neko0001:
-#     name: gocq-neko0001
-#     external: true

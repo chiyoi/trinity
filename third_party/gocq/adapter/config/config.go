@@ -7,7 +7,7 @@ import (
 )
 
 func GetErr[T any](key string) (T, error) {
-	return configs.Get[T](trinity.MaruConfig, key)
+	return configs.Get[T](trinity.GocqConfig, key)
 }
 
 func Get[T any](key string) (val T) {

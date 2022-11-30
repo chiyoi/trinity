@@ -17,8 +17,6 @@ var (
 	Info    = lInfo.Println
 	Warning = lWarning.Println
 	Error   = lError.Println
-	Errorf  = lError.Printf
-	Fatal   = lFatal.Panicln
+	Fatal   = lFatal.Fatalln
 	Debug   = lDebug.Println
 )
-

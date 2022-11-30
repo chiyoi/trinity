@@ -27,7 +27,7 @@ var (
 
 func PostMessage(a ...any) {
 	if _, err := trinity.PostMessage(trinityUrl, auth, a...); err != nil {
-		logs.Error("aira:", err)
+		logs.Error(err)
 		return
 	}
 }
@@ -42,7 +42,18 @@ func RegisterListener(rdb *redis.Client) (err error) {
 	return rdb.SAdd(ctx, redisKeyListeners, serviceURL).Err()
 }
 
+func RemoveListener(rdb *redis.Client) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	return rdb.SRem(ctx, redisKeyListeners, serviceURL).Err()
+}
+
 func EventSynchronizer(timestampChannel chan int64, rdb *redis.Client) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("event synchronizer: %w", err)
+		}
+	}()
 	timestamp := time.Now().Unix()
 	for {
 		select {

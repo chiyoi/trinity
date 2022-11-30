@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/chiyoi/neko03/pkg/neko"
 	"github.com/chiyoi/trinity/internal/app/trinity/config"
+	"github.com/chiyoi/trinity/internal/pkg/logs"
 )
 
 var (
@@ -44,7 +46,8 @@ func init() {
 func handleCacheFile(baseCtx context.Context, w http.ResponseWriter, req Request) {
 	var reqData ReqDataCacheFile
 	if err := json.Unmarshal([]byte(req.Data), &reqData); err != nil {
-		badRequestCallback(w, err)
+		logs.Warning("bad request:", err)
+		neko.BadRequest(w)
 	}
 	blobName := reqData.Sha256SumHex
 	blobUrl := containerUrl.NewBlobURL(blobName)
@@ -53,7 +56,8 @@ func handleCacheFile(baseCtx context.Context, w http.ResponseWriter, req Request
 	defer cancel()
 	if _, err := blobUrl.GetProperties(ctx, azblob.BlobAccessConditions{}, azblob.ClientProvidedKeyOptions{}); err != nil {
 		if responseError, ok := err.(azblob.ResponseError); !ok || responseError.Response().StatusCode == http.StatusNotFound {
-			internalServerErrorCallback(w, err)
+			logs.Error(err)
+			neko.InternalServerError(w)
 			return
 		}
 	}
@@ -87,7 +91,8 @@ func handleCacheFile(baseCtx context.Context, w http.ResponseWriter, req Request
 	}
 	respBody, err := json.Marshal(resp)
 	if err != nil {
-		internalServerErrorCallback(w, err)
+		logs.Error(err)
+		neko.InternalServerError(w)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

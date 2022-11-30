@@ -17,38 +17,34 @@ type dUser struct {
 }
 
 type dMessage struct {
-	Id      string          `bson:"_id,omitempty"`
-	Time    int64           `bson:"time"`
-	User    string          `bson:"user,omitempty"`
-	Message message.Message `bson:"message,omitempty"`
+	Id      primitive.ObjectID `bson:"_id,omitempty"`
+	Time    int64              `bson:"time"`
+	User    string             `bson:"user,omitempty"`
+	Message message.Message    `bson:"message,omitempty"`
 }
 
-func postMessage(baseCtx context.Context, msgColl *mongo.Collection, msg dMessage) (id string, err error) {
+func postMessage(baseCtx context.Context, msgColl *mongo.Collection, msg dMessage) (id MessageId, err error) {
 	ctx, cancel := context.WithTimeout(baseCtx, reqTimeout)
 	defer cancel()
 	resp, err := msgColl.InsertOne(ctx, msg)
 	if err != nil {
 		return
 	}
-	id = resp.InsertedID.(primitive.ObjectID).String()
+	id = resp.InsertedID.(primitive.ObjectID)
 	return
 }
 
-func getMessage(baseCtx context.Context, coll *mongo.Collection, idh string) (doc dMessage, err error) {
+func getMessage(baseCtx context.Context, coll *mongo.Collection, id MessageId) (doc dMessage, err error) {
 	ctx, cancel := context.WithTimeout(baseCtx, reqTimeout)
 	defer cancel()
 
-	id, err := primitive.ObjectIDFromHex(idh)
-	if err != nil {
-		return
-	}
 	if err = coll.FindOne(ctx, bson.M{"_id": id}).Decode(&doc); err != nil {
 		return
 	}
 	return
 }
 
-func queryMessageIds(baseCtx context.Context, coll *mongo.Collection, from, to int64) (ids []string, err error) {
+func queryMessageIds(baseCtx context.Context, coll *mongo.Collection, from, to int64) (ids []MessageId, err error) {
 	var rang bson.A
 	if from != 0 {
 		rang = append(rang, bson.M{"$gte": from})
@@ -74,6 +70,9 @@ func queryMessageIds(baseCtx context.Context, coll *mongo.Collection, from, to i
 	defer cancel()
 	if err = cur.All(ctx, &msgs); err != nil {
 		return
+	}
+	for _, msg := range msgs {
+		ids = append(ids, msg.Id)
 	}
 	return
 }

@@ -72,8 +72,8 @@ func (mux *ServeMux) Handle(matcher Matcher, handler Handler) {
 	defer mux.mu.Unlock()
 	mux.es = appendSorted(mux.es, entry{matcher, handler})
 }
-func (mux *ServeMux) HandleFunc(match func(ev Event) bool, handler func(ev Event)) {
-	mux.Handle(MatcherFunc(match), HandlerFunc(handler))
+func (mux *ServeMux) HandleFunc(matcher func(ev Event) bool, handler func(ev Event)) {
+	mux.Handle(MatcherFunc(matcher), HandlerFunc(handler))
 }
 
 func (mux *ServeMux) Handler(ev Event) (h Handler, m Matcher) {
@@ -91,3 +91,9 @@ func NewServeMux() *ServeMux { return new(ServeMux) }
 
 var defaultServeMux ServeMux
 var DefaultServeMux = &defaultServeMux
+
+func Handle(matcher Matcher, handler Handler) { DefaultServeMux.Handle(matcher, handler) }
+
+func HandleFunc(matcher func(ev Event) bool, handler func(ev Event)) {
+	DefaultServeMux.HandleFunc(matcher, handler)
+}

@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -14,31 +13,11 @@ import (
 	"github.com/chiyoi/trinity/internal/app/trinity/config"
 	"github.com/chiyoi/trinity/internal/pkg/logs"
 
+	"github.com/chiyoi/neko03/pkg/neko"
 	"github.com/go-redis/redis/v8"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
-
-func internalServerErrorCallback(w http.ResponseWriter, err error) {
-	logs.Error("trinity:", err)
-	http.Error(w, "500 internal server error", http.StatusInternalServerError)
-}
-
-func badRequestCallback(w http.ResponseWriter, err error) {
-	logs.Warning("trinity:", err)
-	http.Error(w, "400 bad request", http.StatusBadRequest)
-}
-
-func unauthorizedCallback(w http.ResponseWriter, r *http.Request) {
-	logs.Warning("trinity: authorization error")
-	r.Header.Set("WWW-Authorization", "Basic")
-	http.Error(w, "401 unauthorized", http.StatusUnauthorized)
-}
-
-func forbiddenCallback(w http.ResponseWriter) {
-	logs.Warning("trinity: forbade request")
-	http.Error(w, "403 forbidden", http.StatusForbidden)
-}
 
 func Server(mongodb *mongo.Database, rdb *redis.Client) *http.Server {
 	bg := context.Background()
@@ -52,8 +31,19 @@ func Server(mongodb *mongo.Database, rdb *redis.Client) *http.Server {
 		if !ok {
 			return
 		}
-		req, ok := parseBody(w, r)
-		if !ok {
+
+		data, err := io.ReadAll(r.Body)
+		if err != nil {
+			logs.Error(err)
+			neko.InternalServerError(w)
+			ok = false
+			return
+		}
+		var req Request
+		if err = json.Unmarshal(data, &req); err != nil {
+			logs.Error("cannot parse request:", err)
+			neko.BadRequest(w)
+			ok = false
 			return
 		}
 
@@ -67,7 +57,8 @@ func Server(mongodb *mongo.Database, rdb *redis.Client) *http.Server {
 		case ActionCacheFile:
 			handleCacheFile(bg, w, req)
 		default:
-			badRequestCallback(w, errors.New("invalid action"))
+			logs.Warning("invalid action.")
+			neko.BadRequest(w)
 			return
 		}
 	}
@@ -77,16 +68,23 @@ func Server(mongodb *mongo.Database, rdb *redis.Client) *http.Server {
 	}
 }
 
+func unauthorized(w http.ResponseWriter) {
+	http.Error(w, "401 unauthorized", http.StatusUnauthorized)
+}
 func verifyAuth(baseCtx context.Context, w http.ResponseWriter, r *http.Request, coll *mongo.Collection) (user string, ok bool) {
 	auth := strings.Split(r.Header.Get("Authorization"), " ")
 	if len(auth) != 2 || strings.ToLower(auth[0]) != "basic" {
-		unauthorizedCallback(w, r)
+		logs.Warning("bad authorization header:", auth)
+		r.Header.Set("WWW-Authorization", "Basic")
+		unauthorized(w)
 		ok = false
 		return
 	}
-	b, err := base64.RawStdEncoding.DecodeString(auth[1])
+	b, err := base64.StdEncoding.DecodeString(auth[1])
 	if err != nil {
-		unauthorizedCallback(w, r)
+		logs.Warning("cannot decode token:", auth[1])
+		r.Header.Set("WWW-Authorization", "Basic")
+		unauthorized(w)
 		ok = false
 		return
 	}
@@ -100,53 +98,20 @@ func verifyAuth(baseCtx context.Context, w http.ResponseWriter, r *http.Request,
 	if err != nil {
 		ok = false
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			forbiddenCallback(w)
+			logs.Warning("forbad unknown user:", user)
+			neko.Forbidden(w)
 			return
 		}
-		internalServerErrorCallback(w, err)
+		logs.Error(err)
+		neko.InternalServerError(w)
 		return
 	}
 	if res.Token != token {
-		forbiddenCallback(w)
+		logs.Warning("forbad unmatched user-passwd:", user, token)
+		neko.Forbidden(w)
 		ok = false
 		return
 	}
 	ok = true
 	return
-}
-
-func parseBody(w http.ResponseWriter, r *http.Request) (req Request, ok bool) {
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		internalServerErrorCallback(w, err)
-		ok = false
-		return
-	}
-
-	if err = json.Unmarshal(data, &req); err != nil {
-		badRequestCallback(w, err)
-		ok = false
-		return
-	}
-	ok = true
-	return
-}
-
-func StartSrv(srv *http.Server) {
-	logs.Info("trinity: listening", srv.Addr)
-	err := srv.ListenAndServe()
-	if err != http.ErrServerClosed {
-		logs.Error(err)
-		return
-	}
-	logs.Info(fmt.Sprintf("trinity: server at %s closed.", srv.Addr))
-}
-
-func StopSrv(srv *http.Server) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		logs.Error(err)
-		return
-	}
 }

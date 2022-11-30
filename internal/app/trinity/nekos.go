@@ -25,7 +25,7 @@ func AddNeko(db *mongo.Database, user, passwd string) (err error) {
 	}()
 
 	if len(user) == 0 || len(passwd) == 0 {
-		logs.Warning("trinity: zero value neko~")
+		logs.Warning("zero value neko~")
 		return
 	}
 
@@ -42,7 +42,7 @@ func AddNeko(db *mongo.Database, user, passwd string) (err error) {
 		Token: token,
 	}); err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			logs.Warning("trinity: duplicated neko~")
+			logs.Warning("duplicated neko~")
 			return
 		}
 		return
@@ -74,7 +74,7 @@ func UpdateNeko(db *mongo.Database, user, passwd string) (err error) {
 		return
 	}
 	if res.MatchedCount == 0 {
-		logs.Warning("trinity: attempting to update non-exist neko.")
+		logs.Warning("neko not found~")
 	}
 	return
 }
@@ -98,7 +98,7 @@ func RemoveNeko(db *mongo.Database, user string) (err error) {
 		return
 	}
 	if res.DeletedCount == 0 {
-		logs.Warning("trinity: attempting to update non-exist neko.")
+		logs.Warning("neko not found~")
 	}
 	return
 }

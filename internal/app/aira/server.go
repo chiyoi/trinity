@@ -23,16 +23,6 @@ func Server(chanTimestamp chan<- int64) *atmt.Server {
 	return &atmt.Server{
 		Addr:    ":http",
 		Handler: handlers.LogEvent(mux, chanTimestamp),
-		ErrorCallback: map[int]func(w http.ResponseWriter, err error){
-			http.StatusInternalServerError: func(w http.ResponseWriter, err error) {
-				logs.Error("aira:", err)
-				http.Error(w, "500 internal server error", http.StatusInternalServerError)
-			},
-			http.StatusBadRequest: func(w http.ResponseWriter, err error) {
-				logs.Warning("aira:", err)
-				http.Error(w, "400 bad request", http.StatusBadRequest)
-			},
-		},
 	}
 }
 
@@ -40,7 +30,7 @@ func StartSrv(srv *atmt.Server) {
 	logs.Info("アトリ、起動！")
 	err := srv.ListenAndServe()
 	if err != http.ErrServerClosed {
-		logs.Error("aira:", err)
+		logs.Error(err)
 		return
 	}
 	logs.Info(fmt.Sprintf("aria: server at %s closed.", srv.Addr))

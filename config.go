@@ -55,7 +55,7 @@ var AiraConfig = map[string]any{
 	"CommandPrefix": []string{"."},
 }
 
-var MaruConfig = map[string]any{
+var GocqConfig = map[string]any{
 	"ServiceURL": "http://maru/",
 
 	"TrinityURL":     "http://trinity/",

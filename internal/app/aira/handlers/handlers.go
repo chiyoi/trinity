@@ -19,6 +19,6 @@ func LogEvent(baseHandler atmt.Handler, chanTimestamp chan<- int64) atmt.Handler
 }
 
 func ErrorCallback(err error) {
-	logs.Error("aira:", err)
+	logs.Error(err)
 	client.PostMessage(fmt.Sprintf("何処か間違ったような…[%s]", err))
 }

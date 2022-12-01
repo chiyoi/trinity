@@ -12,12 +12,12 @@ type Request struct {
 type Action uint8
 
 const (
-	invalid Action = iota
-	ActionPostMessage
+	ActionPostMessage Action = iota + 1
 	ActionGetMessage
 	ActionQueryMessageIdsTimeRange
 
 	ActionCacheFile
+	ActionVerifyAuthorization
 )
 
 func (act Action) String() string {
@@ -30,6 +30,8 @@ func (act Action) String() string {
 		return "query message ids time range"
 	case ActionCacheFile:
 		return "cache file"
+	case ActionVerifyAuthorization:
+		return "verify authorization"
 	default:
 		return "invalid action"
 	}
@@ -38,19 +40,17 @@ func (act Action) String() string {
 type ReqDataPostMessage struct {
 	Message message.Message `json:"message"`
 }
-
 type ReqDataGetMessage struct {
 	Id string `json:"id"`
 }
-
 type ReqDataQueryMessageTimeRange struct {
 	From int64 `json:"from"`
 	To   int64 `json:"to"`
 }
-
 type ReqDataCacheFile struct {
 	Md5SumHex string `json:"md5_sum_hex"`
 }
+type ReqDataVerifyAuthorization struct{}
 
 type Response[Data any] struct {
 	StatusCode StatusCode `json:"status_code"`
@@ -64,28 +64,27 @@ const (
 	StatusFailed
 )
 
+type RespData interface {
+	RespDataPostMessage |
+		RespDataGetMessage |
+		RespDataQueryMessageTimeRange |
+		RespDataCacheFile |
+		RespDataVerifyAuthorization
+}
+
 type RespDataPostMessage struct {
 	MessageId string `json:"message_id"`
 }
-
 type RespDataGetMessage struct {
 	Time      int64           `json:"time"`
 	User      string          `json:"user"`
 	MessageId string          `json:"message_id"`
 	Message   message.Message `json:"message"`
 }
-
 type RespDataQueryMessageTimeRange struct {
 	Ids []string `json:"ids"`
 }
-
 type RespDataCacheFile struct {
 	SasURL string `json:"sas_url"`
 }
-
-type RespData interface {
-	RespDataPostMessage |
-		RespDataGetMessage |
-		RespDataQueryMessageTimeRange |
-		RespDataCacheFile
-}
+type RespDataVerifyAuthorization struct{}

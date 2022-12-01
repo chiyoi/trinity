@@ -56,6 +56,19 @@ func Server(mongodb *mongo.Database, rdb *redis.Client) *http.Server {
 			handleQueryMessageIdsTimeRange(bg, w, req, messageCollection)
 		case ActionCacheFile:
 			handleCacheFile(bg, w, req)
+		case ActionVerifyAuthorization:
+			respBody, err := json.Marshal(Response{
+				StatusCode: StatusOK,
+				Data:       RespDataVerifyAuthorization{},
+			})
+			if err != nil {
+				logs.Error(err)
+				neko.InternalServerError(w)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write(respBody)
 		default:
 			logs.Warning("invalid action.")
 			neko.BadRequest(w)

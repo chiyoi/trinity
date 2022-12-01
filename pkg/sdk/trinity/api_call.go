@@ -13,17 +13,29 @@ import (
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
 
+	"github.com/chiyoi/trinity/internal/pkg/logs"
 	"github.com/chiyoi/trinity/pkg/atmt/message"
 )
 
-type ApiCallError struct {
-	Action     Action
-	StatusCode int
+type ApiCallError interface {
+	error
+	Action() Action
+	StatusCode() int
 }
 
-func (e *ApiCallError) Error() string {
-	return fmt.Sprintf("api call error[%s](%d %s)", e.Action, e.StatusCode, http.StatusText(e.StatusCode))
+type apiCallError struct {
+	action     Action
+	statusCode int
 }
+
+var _ ApiCallError = (*apiCallError)(nil)
+
+func (err *apiCallError) Error() string {
+	return fmt.Sprintf("api call error[%s](%d %s)", err.action, err.statusCode, http.StatusText(err.statusCode))
+}
+
+func (err *apiCallError) Action() Action  { return err.action }
+func (err *apiCallError) StatusCode() int { return err.statusCode }
 
 func CallApiCtx[Data RespData](ctx context.Context, url string, auth string, req Request) (resp Response[Data], err error) {
 	defer func() {
@@ -31,7 +43,6 @@ func CallApiCtx[Data RespData](ctx context.Context, url string, auth string, req
 			err = fmt.Errorf("call api: %w", err)
 		}
 	}()
-
 	b, err := json.Marshal(req)
 	if err != nil {
 		return
@@ -47,9 +58,9 @@ func CallApiCtx[Data RespData](ctx context.Context, url string, auth string, req
 	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil || httpResp.StatusCode != http.StatusOK {
 		if err == nil {
-			err = &ApiCallError{
-				Action:     req.Action,
-				StatusCode: httpResp.StatusCode,
+			err = &apiCallError{
+				action:     req.Action,
+				statusCode: httpResp.StatusCode,
 			}
 		}
 		return
@@ -59,6 +70,7 @@ func CallApiCtx[Data RespData](ctx context.Context, url string, auth string, req
 		return
 	}
 	if err = json.Unmarshal(b, &resp); err != nil {
+		logs.Debug(string(b))
 		return
 	}
 	return
@@ -73,7 +85,6 @@ func PostMessage(url string, auth string, a ...any) (messageId string, err error
 			err = fmt.Errorf("post message: %w", err)
 		}
 	}()
-
 	resp, err := CallApi[RespDataPostMessage](url, auth, Request{
 		Action: ActionPostMessage,
 		Data: ReqDataPostMessage{
@@ -93,7 +104,6 @@ func GetMessage(url string, auth string, id string) (data RespDataGetMessage, er
 			err = fmt.Errorf("get message: %w", err)
 		}
 	}()
-
 	resp, err := CallApi[RespDataGetMessage](url, auth, Request{
 		Action: ActionQueryMessageIdsTimeRange,
 		Data: ReqDataGetMessage{
@@ -113,7 +123,6 @@ func QueryMessageIdsTimeRange(url string, auth string, from, to int64) (ids []st
 			err = fmt.Errorf("query message ids time range: %w", err)
 		}
 	}()
-
 	resp, err := CallApi[RespDataQueryMessageTimeRange](url, auth, Request{
 		Action: ActionQueryMessageIdsTimeRange,
 		Data: ReqDataQueryMessageTimeRange{
@@ -134,7 +143,6 @@ func CacheFileCtx(ctx context.Context, url string, auth string, data []byte) (sa
 			err = fmt.Errorf("cache file: %w", err)
 		}
 	}()
-
 	md5Sum := md5.Sum(data)
 	resp, err := CallApiCtx[RespDataCacheFile](ctx, url, auth, Request{
 		Action: ActionQueryMessageIdsTimeRange,
@@ -175,4 +183,24 @@ func CacheFileCtx(ctx context.Context, url string, auth string, data []byte) (sa
 }
 func CacheFile(url string, auth string, data []byte) (sasUrl string, err error) {
 	return CacheFileCtx(context.Background(), url, auth, data)
+}
+
+func VerifyAuthorization(url string, auth string) (pass bool, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("verify authorization: %w", err)
+		}
+	}()
+	if _, err = CallApi[RespDataVerifyAuthorization](url, auth, Request{
+		Action: ActionVerifyAuthorization,
+		Data:   ReqDataVerifyAuthorization{},
+	}); err != nil {
+		if acErr, ok := err.(ApiCallError); ok && (acErr.StatusCode() == http.StatusUnauthorized || acErr.StatusCode() == http.StatusForbidden) {
+			pass = false
+			return
+		}
+		return
+	}
+	pass = true
+	return
 }

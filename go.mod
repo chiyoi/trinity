@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/Azure/azure-storage-blob-go v0.15.0
 	github.com/chiyoi/neko03 v1.0.1
-	github.com/chiyoi/websocket v1.0.0
+	github.com/chiyoi/websocket v1.1.3
 	github.com/go-redis/redis/v8 v8.11.5
 	go.mongodb.org/mongo-driver v1.11.0
 )

@@ -54,20 +54,3 @@ var AiraConfig = map[string]any{
 
 	"CommandPrefix": []string{"."},
 }
-
-var GocqConfig = map[string]any{
-	"ServiceURL": "http://maru/",
-
-	"TrinityURL":     "http://trinity/",
-	"OnebotURL":      "http://gocq/",
-	"OnebotEventURL": "ws://gocq:8080/",
-
-	"RedisOptions": &redis.Options{
-		Addr:     "redis-18080.c56.east-us.azure.cloud.redislabs.com:18080",
-		Username: "maru",
-		Password: "Neko03Maru@redis",
-	},
-	"RedisKeyUsersLoggedIn": "maru:usersLoggedIn",
-	"RedisKeyNekoMap":       "maru:nekoMap",
-	"RedisKeyListeners":     "trinity:listeners",
-}

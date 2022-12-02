@@ -26,17 +26,6 @@ services:
     networks:
       - trinity_network
 
-  # maru:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.maru
-  #   image: chiyoi/trinity-maru
-  #   container_name: maru
-  #   hostname: maru
-  #   # restart: always
-  #   networks:
-  #     - trinity_network
-
 networks:
   trinity_network:
     name: trinity_network

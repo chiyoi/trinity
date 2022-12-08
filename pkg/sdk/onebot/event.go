@@ -2,8 +2,6 @@ package onebot
 
 import (
 	"time"
-
-	"github.com/chiyoi/trinity/pkg/sdk/onebot/message"
 )
 
 type EventType string
@@ -113,7 +111,7 @@ type Event struct {
 	SubType     MessageSubtype   `json:"sub_type"`
 	MessageId   MessageId        `json:"message_id"`
 	UserId      UserId           `json:"user_id"`
-	Message     message.Message  `json:"message"`
+	Message     Message          `json:"message"`
 	RawMessage  string           `json:"raw_message"`
 	Font        int              `json:"font"`
 	Sender      Sender           `json:"sender"`

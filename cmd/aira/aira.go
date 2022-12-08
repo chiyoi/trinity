@@ -7,34 +7,42 @@ import (
 
 	"github.com/chiyoi/trinity/internal/app/aira"
 	"github.com/chiyoi/trinity/internal/app/aira/client"
+	"github.com/chiyoi/trinity/internal/app/aira/db"
 	"github.com/chiyoi/trinity/internal/pkg/logs"
+	"github.com/chiyoi/trinity/pkg/atmt"
 )
 
 func main() {
-	rdb, err := aira.OpenRedis()
+	rdb, err := db.OpenRedis()
 	if err != nil {
 		logs.Fatal(err)
 	}
-	if err = client.RegisterListener(rdb); err != nil {
-		logs.Fatal(err)
-	}
 	defer func() {
-		if err := client.RemoveListener(rdb); err != nil {
+		if err := rdb.Close(); err != nil {
 			logs.Error(err)
 		}
 	}()
-	timestampChannel := make(chan int64, 1)
-	go func() {
-		if err := client.EventSynchronizer(timestampChannel, rdb); err != nil {
-			logs.Fatal("aira:", err)
+	db.SetDB(rdb)
+	if err = client.RegisterListener(); err != nil {
+		logs.Fatal(err)
+	}
+	defer func() {
+		if err := client.RemoveListener(); err != nil {
+			logs.Error(err)
 		}
 	}()
-	srv := aira.Server(timestampChannel)
-	go aira.StartSrv(srv)
-	defer aira.StopSrv(srv)
+	// timestampChannel := make(chan int64, 1)
+	// go func() {
+	// 	if err := client.EventSynchronizer(timestampChannel, rdb); err != nil {
+	// 		logs.Fatal("aira:", err)
+	// 	}
+	// }()
+	srv := aira.Server()
+	go atmt.StartSrv(srv)
+	defer atmt.StopSrv(srv)
 
-	term := make(chan os.Signal, 1)
-	signal.Notify(term, syscall.SIGTERM)
-	<-term
-	logs.Info("terminate")
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+	sig := <-stop
+	logs.Info("stop:", sig)
 }

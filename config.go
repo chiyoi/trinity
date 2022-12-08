@@ -51,6 +51,4 @@ var AiraConfig = map[string]any{
 		Password: "Neko03Aira@redis",
 	},
 	"RedisKeyListeners": "trinity:listeners",
-
-	"CommandPrefix": []string{"."},
 }

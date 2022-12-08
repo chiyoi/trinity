@@ -3,6 +3,7 @@ package atmt
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -12,46 +13,55 @@ import (
 )
 
 type Server struct {
-	Addr string
-
+	Addr    string
 	Handler Handler
-
 	httpSrv *http.Server
 }
 
-func (srv *Server) ListenAndServe() (err error) {
-	h := srv.Handler
-	if h == nil {
-		h = DefaultServeMux
+func (srv *Server) h() Handler {
+	if srv.Handler == nil {
+		return DefaultServeMux
+	}
+	return srv.Handler
+}
+
+func (srv *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		logs.Error("trin:", err)
+		neko.InternalServerError(w)
+		return
+	}
+	var post Message
+	if err = json.Unmarshal(data, &post); err != nil {
+		logs.Warning("trin:", err)
+		neko.BadRequest(w)
+		return
 	}
 
-	httpHandler := func(w http.ResponseWriter, r *http.Request) {
-		data, err := io.ReadAll(r.Body)
+	var resp Message
+	defer func() {
+		data, err := json.Marshal(resp)
 		if err != nil {
-			logs.Error("atmt:", err)
+			logs.Error("trin:", err)
 			neko.InternalServerError(w)
 			return
 		}
-		var req Request
-		if err = json.Unmarshal(data, &req); err != nil {
-			logs.Warning("atmt:", err)
-			neko.BadRequest(w)
+		if _, err = w.Write(data); err != nil {
+			logs.Error("trin:", err)
 			return
 		}
+	}()
+	srv.h().ServeMessage(&resp, post)
+}
 
-		ev := Event{
-			time.Unix(req.Time, 0),
-			req.User,
-			req.MessageId,
-			req.Message,
-		}
-		go h.ServeEvent(ev)
-	}
+func (srv *Server) ListenAndServe() (err error) {
 	srv.httpSrv = &http.Server{
-		Addr:    srv.Addr,
-		Handler: http.HandlerFunc(httpHandler),
+		Addr: srv.Addr,
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			srv.handleHTTP(w, r)
+		}),
 	}
-
 	return srv.httpSrv.ListenAndServe()
 }
 
@@ -59,10 +69,21 @@ func (srv *Server) Shutdown(ctx context.Context) (err error) {
 	return srv.httpSrv.Shutdown(ctx)
 }
 
-func ListenAndServe(addr string, handler Handler) error {
-	srv := &Server{
-		Addr:    addr,
-		Handler: handler,
+func StartSrv(srv *Server) {
+	logs.Info("listening", srv.Addr)
+	err := srv.ListenAndServe()
+	if err != http.ErrServerClosed {
+		logs.Error(err)
+		return
 	}
-	return srv.ListenAndServe()
+	logs.Info(fmt.Sprintf("server at %s closed.", srv.Addr))
+}
+
+func StopSrv(srv *Server) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		logs.Error(err)
+		return
+	}
 }

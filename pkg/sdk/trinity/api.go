@@ -1,13 +1,10 @@
 package trinity
 
 import (
-	"github.com/chiyoi/trinity/pkg/atmt/message"
-)
+	"fmt"
 
-type Request struct {
-	Action Action `json:"action"`
-	Data   any    `json:"data"`
-}
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type Action uint8
 
@@ -20,71 +17,43 @@ const (
 	ActionVerifyAuthorization
 )
 
-func (act Action) String() string {
+func (act Action) String() (str string) {
+	defer func() {
+		str = fmt.Sprintf("Action(%s)", str)
+	}()
 	switch act {
 	case ActionPostMessage:
 		return "post message"
-	case ActionGetMessage:
-		return "get message"
-	case ActionQueryMessageIdsTimeRange:
-		return "query message ids time range"
-	case ActionCacheFile:
-		return "cache file"
-	case ActionVerifyAuthorization:
-		return "verify authorization"
 	default:
 		return "invalid action"
 	}
 }
 
-type ReqDataPostMessage struct {
-	Message message.Message `json:"message"`
-}
-type ReqDataGetMessage struct {
-	Id string `json:"id"`
-}
-type ReqDataQueryMessageTimeRange struct {
-	From int64 `json:"from"`
-	To   int64 `json:"to"`
-}
-type ReqDataCacheFile struct {
-	Md5SumHex string `json:"md5_sum_hex"`
-}
-type ReqDataVerifyAuthorization struct{}
-
-type Response[Data any] struct {
-	StatusCode StatusCode `json:"status_code"`
-	Data       Data       `json:"data"`
+type MessageId = primitive.ObjectID
+type ArgsPostMessage struct {
+	Sender string `json:"sender"`
+	Auth   string `json:"auth"`
 }
 
-type StatusCode uint8
-
-const (
-	StatusOK StatusCode = iota
-	StatusFailed
-)
-
-type RespData interface {
-	RespDataPostMessage |
-		RespDataGetMessage |
-		RespDataQueryMessageTimeRange |
-		RespDataCacheFile |
-		RespDataVerifyAuthorization
+type ArgsGetMessage struct {
+	Auth string `json:"auth"`
+	Id   string `json:"id"`
 }
 
-type RespDataPostMessage struct {
-	MessageId string `json:"message_id"`
+type ArgsQueryMessageTimeRange struct {
+	Auth string `json:"auth"`
+	From int64  `json:"from"`
+	To   int64  `json:"to"`
 }
-type RespDataGetMessage struct {
-	Time      int64           `json:"time"`
-	User      string          `json:"user"`
-	MessageId string          `json:"message_id"`
-	Message   message.Message `json:"message"`
+
+type ArgsCacheFile struct {
+	Auth         string `json:"auth"`
+	Sha256SumHex string `json:"sha256_sum_hex"`
 }
-type RespDataQueryMessageTimeRange struct {
-	Ids []string `json:"ids"`
+
+type ArgsVoid struct{}
+
+type RequestBuilder[Args any] struct {
+	Action Action `json:"action"`
+	Args   Args   `json:"args"`
 }
-type RespDataCacheFile struct {
-	SasURL string `json:"sas_url"`
-}
-type RespDataVerifyAuthorization struct{}

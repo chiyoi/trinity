@@ -1,9 +1,5 @@
 package onebot
 
-import (
-	"github.com/chiyoi/trinity/pkg/sdk/onebot/message"
-)
-
 type Request struct {
 	Action Action `json:"action"`
 	Params any    `json:"params"`
@@ -33,7 +29,7 @@ type ReqParamsSendMsg struct {
 	MessageType EventMessageType `json:"message_type"`
 	UserId      UserId           `json:"user_id"`
 	GroupId     GroupId          `json:"group_id"`
-	Message     message.Message  `json:"message"`
+	Message     Message          `json:"message"`
 	AutoEscape  bool             `json:"auto_escape"`
 }
 

@@ -1,9 +1,10 @@
-package trinity
+package db
 
 import (
 	"context"
 	"fmt"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/chiyoi/trinity/internal/app/trinity/config"
@@ -13,7 +14,7 @@ import (
 )
 
 var (
-	reqTimeout = time.Second * 10
+	opTimeout = time.Second * 10
 )
 
 func OpenMongo() (db *mongo.Database, err error) {
@@ -28,7 +29,7 @@ func OpenMongo() (db *mongo.Database, err error) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(bg, reqTimeout)
+	ctx, cancel := context.WithTimeout(bg, opTimeout)
 	defer cancel()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongodbUri.String()))
 	if err != nil {
@@ -50,4 +51,26 @@ func OpenRedis() (rdb *redis.Client, err error) {
 	}
 	rdb = redis.NewClient(opt)
 	return
+}
+
+var pool struct {
+	rdb     *redis.Client
+	mongodb *mongo.Database
+	mu      sync.RWMutex
+}
+
+func SetDB(r *redis.Client, m *mongo.Database) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	if r != nil {
+		pool.rdb = r
+	}
+	if m != nil {
+		pool.mongodb = m
+	}
+}
+func GetDB() (r *redis.Client, m *mongo.Database) {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
+	return pool.rdb, pool.mongodb
 }

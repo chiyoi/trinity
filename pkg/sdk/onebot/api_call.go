@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/chiyoi/trinity/pkg/sdk/onebot/message"
 )
 
 type ApiCallError struct {
@@ -73,7 +71,7 @@ func SendMsg(url string, id UserId, a ...any) (messageId MessageId, err error) {
 		Params: ReqParamsSendMsg{
 			MessageType: MessagePrivate,
 			UserId:      id,
-			Message:     message.Format(a...),
+			Message:     FormatMessage(a...),
 		},
 	})
 	if err != nil {

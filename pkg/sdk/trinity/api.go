@@ -11,9 +11,9 @@ type Action uint8
 const (
 	ActionPostMessage Action = iota + 1
 	ActionGetMessage
-	ActionQueryMessageIdsTimeRange
+	ActionQueryMessageIdsLatestCount
 
-	ActionCacheFile
+	ActionGetBlobCacheURL
 	ActionVerifyAuthorization
 )
 
@@ -24,36 +24,59 @@ func (act Action) String() (str string) {
 	switch act {
 	case ActionPostMessage:
 		return "post message"
+	case ActionGetMessage:
+		return "get message"
+	case ActionQueryMessageIdsLatestCount:
+		return "query message-ids time range"
+	case ActionGetBlobCacheURL:
+		return "get blob cache url"
+	case ActionVerifyAuthorization:
+		return "verify authorization"
 	default:
 		return "invalid action"
 	}
 }
 
-type MessageId = primitive.ObjectID
+type void = struct{}
+
+type MessageID = primitive.ObjectID
+
 type ArgsPostMessage struct {
-	Sender string `json:"sender"`
-	Auth   string `json:"auth"`
+	Auth string `json:"auth"`
+}
+type ValuesPostMessage struct {
+	MessageID MessageID `json:"message_id"`
 }
 
 type ArgsGetMessage struct {
+	Auth string    `json:"auth"`
+	ID   MessageID `json:"id"`
+}
+type ValuesGetMessage struct {
+	Sender    string    `json:"sender"`
+	MessageID MessageID `json:"message_id"`
+}
+
+type ValuesQueryMessageIds struct {
+	Ids []MessageID `json:"ids"`
+}
+type ArgsQueryMessageIdsLatestCount struct {
+	Auth  string `json:"auth"`
+	Count int    `json:"count"`
+}
+type ValuesQueryMessageIdsLatestCount = ValuesQueryMessageIds
+
+type ArgsGetBlobCacheURL struct {
+	Auth     string `json:"auth"`
+	BlobName string `json:"blob_name"`
+}
+type ValuesGetBlobCacheURL struct {
+	SasURL string `json:"sas_url"`
+}
+
+type ArgsVerifyAuthorization struct {
 	Auth string `json:"auth"`
-	Id   string `json:"id"`
 }
-
-type ArgsQueryMessageTimeRange struct {
-	Auth string `json:"auth"`
-	From int64  `json:"from"`
-	To   int64  `json:"to"`
-}
-
-type ArgsCacheFile struct {
-	Auth         string `json:"auth"`
-	Sha256SumHex string `json:"sha256_sum_hex"`
-}
-
-type ArgsVoid struct{}
-
-type RequestBuilder[Args any] struct {
-	Action Action `json:"action"`
-	Args   Args   `json:"args"`
+type ValuesVerifyAuthorization struct {
+	Pass bool `json:"pass"`
 }

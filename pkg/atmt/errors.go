@@ -1,6 +1,19 @@
 package atmt
 
-import "fmt"
+import (
+	"fmt"
+	"net/http"
+)
+
+type httpError struct {
+	code int
+}
+
+var _ error = (*httpError)(nil)
+
+func (err *httpError) Error() string {
+	return fmt.Sprintf("http error(%d %s)", err.code, http.StatusText(err.code))
+}
 
 type PostError interface {
 	error

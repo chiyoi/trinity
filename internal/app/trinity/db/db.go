@@ -13,8 +13,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+const (
+	dbTimeout = time.Second * 10
+)
+
 var (
-	opTimeout = time.Second * 10
+	errMongodbNotSet = fmt.Errorf("mongodb not set")
+	errRdbNotSet     = fmt.Errorf("rdb not set")
 )
 
 func OpenMongo() (db *mongo.Database, err error) {
@@ -29,7 +34,7 @@ func OpenMongo() (db *mongo.Database, err error) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(bg, opTimeout)
+	ctx, cancel := context.WithTimeout(bg, dbTimeout)
 	defer cancel()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongodbUri.String()))
 	if err != nil {

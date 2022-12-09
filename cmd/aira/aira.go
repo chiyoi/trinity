@@ -23,6 +23,7 @@ func main() {
 		}
 	}()
 	db.SetDB(rdb)
+
 	if err = client.RegisterListener(); err != nil {
 		logs.Fatal(err)
 	}
@@ -31,12 +32,8 @@ func main() {
 			logs.Error(err)
 		}
 	}()
-	// timestampChannel := make(chan int64, 1)
-	// go func() {
-	// 	if err := client.EventSynchronizer(timestampChannel, rdb); err != nil {
-	// 		logs.Fatal("aira:", err)
-	// 	}
-	// }()
+	go aira.Heartbeat()
+
 	srv := aira.Server()
 	go atmt.StartSrv(srv)
 	defer atmt.StopSrv(srv)

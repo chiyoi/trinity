@@ -11,6 +11,6 @@ func Server() *atmt.Server {
 	mux.Handle(aira.Aira())
 	return &atmt.Server{
 		Addr:    ":http",
-		Handler: handlers.LogEvent(mux),
+		Handler: handlers.LogMessage(mux),
 	}
 }

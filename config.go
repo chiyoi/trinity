@@ -33,7 +33,7 @@ var TrinityConfig = map[string]any{
 
 	"AzureStorageAccount": "neko03storage",
 	"AzureStorageKey":     "lZzvHnmRwYiD1t9xEDZhxn07eNtmn4J3qiu/8UGkfGEeL1Pz3C/yR8+hY7rmJo/xVuTLMtilsq/7+ASte3hwBQ==",
-	"FileCacheContainer":  "trinity-file-cache",
+	"FileCacheContainer":  "trinity-blob-cache",
 }
 
 var AiraConfig = map[string]any{

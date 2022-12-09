@@ -23,33 +23,40 @@ var (
 	dbTimeout = time.Second * 10
 )
 
-func PostMessage(a ...any) {
+func PostMessage(v ...any) {
 	logPrefix := "post message:"
-	var content []atmt.Paragraph
-	for _, aa := range a {
-		switch t := aa.(type) {
-		case atmt.Paragraph:
-			content = append(content, t)
-		default:
-			content = append(content, atmt.Paragraph{
-				Type: atmt.ParagraphText,
-				Text: fmt.Sprint(t),
-			})
-		}
-	}
-	if err := trinity.PostMessage(trinityURL, auth, content); err != nil {
+	if _, _, err := trinity.Request[trinity.ArgsPostMessage, trinity.ValuesPostMessage](
+		trinityURL,
+		trinity.ActionPostMessage,
+		trinity.ArgsPostMessage{
+			Auth: auth,
+		},
+		atmt.FormatContent(v...),
+	); err != nil {
 		logs.Error(logPrefix, err)
 		return
 	}
 }
 
-// func CacheFile(data []byte) (sasUrl string, err error) {
-// 	return trinity.CacheFile(trinityUrl, auth, data)
-// }
+func CacheBlob(b []byte) (url string, err error) {
+	return trinity.CacheBlob(trinityURL, auth, b)
+}
 
 var (
 	errRdbNotSet = fmt.Errorf("rdb not set")
 )
+
+func CheckListener() (ok bool, err error) {
+	rdb := db.GetDB()
+	if rdb == nil {
+		err = errRdbNotSet
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+	cmd := rdb.SIsMember(ctx, redisKeyListeners, serviceURL)
+	return cmd.Val(), cmd.Err()
+}
 
 func RegisterListener() (err error) {
 	rdb := db.GetDB()
@@ -70,73 +77,3 @@ func RemoveListener() (err error) {
 	defer cancel()
 	return rdb.SRem(ctx, redisKeyListeners, serviceURL).Err()
 }
-
-// func EventSynchronizer(timestampChannel chan int64) (err error) {
-// 	defer func() {
-// 		if err != nil {
-// 			err = fmt.Errorf("event synchronizer: %w", err)
-// 		}
-// 	}()
-// 	rdb, _ := db.GetDB()
-// 	if rdb == nil {
-// 		return errRdbNotSet
-// 	}
-// 	timestamp := time.Now().Unix()
-// 	for {
-// 		select {
-// 		case timestamp = <-timestampChannel:
-// 			continue
-// 		case <-time.After(time.Second * 10):
-// 		}
-
-// 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-// 		defer cancel()
-// 		cmd := rdb.SIsMember(ctx, redisKeyListeners, serviceURL)
-// 		if err = cmd.Err(); err != nil {
-// 			return
-// 		}
-// 		if cmd.Val() {
-// 			continue
-// 		}
-
-// 		ctx, cancel = context.WithTimeout(context.Background(), time.Second*10)
-// 		defer cancel()
-// 		if err = rdb.SAdd(ctx, redisKeyListeners, serviceURL).Err(); err != nil {
-// 			return
-// 		}
-
-// 		ids, err := trinity.QueryMessageIdsTimeRange(trinityUrl, auth, timestamp, time.Now().Unix())
-// 		if err != nil {
-// 			logs.Error("sync worker:", err)
-// 			continue
-// 		}
-// 		for _, id := range ids {
-// 			data, err := trinity.GetMessage(trinityUrl, auth, id)
-// 			if err != nil {
-// 				logs.Error("sync worker:", err)
-// 				continue
-// 			}
-
-// 			req := atmt.Request{
-// 				Time:      timestamp,
-// 				User:      data.User,
-// 				MessageId: id,
-// 				Message:   data.Message,
-// 			}
-// 			b, err := json.Marshal(req)
-// 			if err != nil {
-// 				logs.Error("sync worker:", err)
-// 				continue
-// 			}
-
-// 			resp, err := http.Post("localhost", "application/json", bytes.NewReader(b))
-// 			if err != nil || resp.StatusCode != http.StatusOK {
-// 				if err == nil {
-// 					err = fmt.Errorf("api call error(%d %s)", resp.StatusCode, resp.Status)
-// 				}
-// 				logs.Error("sync worker:", err)
-// 				continue
-// 			}
-// 		}
-// 	}
-// }

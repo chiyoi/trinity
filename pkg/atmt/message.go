@@ -3,7 +3,6 @@ package atmt
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -12,12 +11,19 @@ import (
 type Message struct {
 	Type    MessageType     `json:"type"`
 	Data    json.RawMessage `json:"data"`
-	Content []Paragraph     `json:"content"`
+	Content Content         `json:"content"`
 }
+
+type Content []Paragraph
+
+func (c Content) String() string {
+	return c.Plaintext()
+}
+
 type MessageType uint8
 
 const (
-	MessagePost MessageType = iota + 1
+	MessagePush MessageType = iota + 1
 	MessageRequest
 	MessageResponse
 )
@@ -27,7 +33,7 @@ func (typ MessageType) String() (str string) {
 		str = fmt.Sprintf("MessageType(%s)", str)
 	}()
 	switch typ {
-	case MessagePost:
+	case MessagePush:
 		return "post"
 	case MessageRequest:
 		return "request"
@@ -42,7 +48,7 @@ type Paragraph struct {
 	Type ParagraphType `json:"type" bson:"type,omitempty"`
 	Text string        `json:"text" bson:"text,omitempty"`
 	Name string        `json:"name" bson:"name,omitempty"`
-	Ref  string        `json:"ref" bson:"text,omitempty"`
+	Ref  string        `json:"ref" bson:"ref,omitempty"`
 }
 
 type ParagraphType uint8
@@ -51,11 +57,14 @@ const (
 	ParagraphText ParagraphType = iota + 1
 	ParagraphImage
 	ParagraphRecord
+	ParagraphVideo
 )
 
-type DataPost struct {
-	MessageId primitive.ObjectID `json:"message_id"`
-	SenderId  string             `json:"sender_id"`
+type MessageID = primitive.ObjectID
+
+type DataPush struct {
+	MessageID MessageID `json:"message_id"`
+	Sender    string    `json:"sender"`
 }
 
 type DataRequest[Action ~uint8] struct {
@@ -65,7 +74,7 @@ type DataRequest[Action ~uint8] struct {
 
 type DataResponse struct {
 	StatusCode StatusCode      `json:"status_code"`
-	Args       json.RawMessage `json:"args"`
+	Values     json.RawMessage `json:"values"`
 }
 
 type StatusCode uint8
@@ -96,12 +105,9 @@ func (c StatusCode) Text() string {
 	}
 }
 
-func (msg *Message) Plaintext() string {
-	if reflect.TypeOf(msg) != reflect.TypeOf(&Message{}) {
-		return ""
-	}
+func (c *Content) Plaintext() string {
 	var buf strings.Builder
-	for _, para := range msg.Content {
+	for _, para := range *c {
 		if para.Type == ParagraphText {
 			buf.WriteString(para.Text)
 		}
@@ -125,4 +131,62 @@ func (b *MessageBuilder[Data]) Message() (msg Message, err error) {
 		Data:    data,
 		Content: b.Content,
 	}, err
+}
+
+func (b *MessageBuilder[Data]) Write(w *Message) (err error) {
+	*w, err = b.Message()
+	return
+}
+
+type DataRequestBuilder[Action ~uint8, Args any] struct {
+	Action Action `json:"action"`
+	Args   Args   `json:"args"`
+}
+
+type DataResponseBuilder[Values any] struct {
+	StatusCode StatusCode `json:"status_code"`
+	Values     Values     `json:"values"`
+}
+
+func FormatContent(v ...any) (content Content) {
+	for _, a := range v {
+		switch t := a.(type) {
+		case Paragraph:
+			content = append(content, t)
+		default:
+			content = append(content, Text(fmt.Sprint(a)))
+		}
+	}
+	return
+}
+
+func Text(txt string) Paragraph {
+	return Paragraph{
+		Type: ParagraphText,
+		Text: txt,
+	}
+}
+
+func Image(name, ref string) Paragraph {
+	return Paragraph{
+		Type: ParagraphImage,
+		Name: name,
+		Ref:  ref,
+	}
+}
+
+func Record(name, ref string) Paragraph {
+	return Paragraph{
+		Type: ParagraphRecord,
+		Name: name,
+		Ref:  ref,
+	}
+}
+
+func Video(name, ref string) Paragraph {
+	return Paragraph{
+		Type: ParagraphVideo,
+		Name: name,
+		Ref:  ref,
+	}
 }

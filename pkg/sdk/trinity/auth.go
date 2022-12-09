@@ -3,31 +3,36 @@ package trinity
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"strings"
 )
 
-func CreateAuthorization(user, passwd string) (auth string) {
+func PasswdToken(passwd string) (token string) {
 	passwdS256 := sha256.Sum256([]byte(passwd))
-	passwdS256B64 := base64.StdEncoding.EncodeToString(passwdS256[:])
-	token := fmt.Sprintf("%s:%s", user, passwdS256B64)
-	return base64.StdEncoding.EncodeToString([]byte(token))
+	return PasswdS256Token(passwdS256)
+}
+func PasswdS256Token(passwdS256 [sha256.Size]byte) (token string) {
+	return base64.StdEncoding.EncodeToString(passwdS256[:])
 }
 
-func ParseAuthToken(auth string) (user string, passwdS256 [sha256.Size]byte, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("parse authorization token: %w", err)
-		}
-	}()
+func CreateAuthorization(user, passwd string) (auth string) {
+	token := PasswdToken(passwd)
+	return CreateAuthorizationToken(user, token)
+}
+func CreateAuthorizationToken(user, token string) (auth string) {
+	pair := fmt.Sprintf("%s:%s", user, token)
+	return base64.StdEncoding.EncodeToString([]byte(pair))
+}
+
+func ParseAuthorization(auth string) (user string, passwdS256 [sha256.Size]byte, err error) {
 	token, err := base64.StdEncoding.DecodeString(auth)
 	if err != nil {
 		return
 	}
 	t := strings.Split(string(token), ":")
 	if len(t) != 2 {
-		err = errors.New("bad format")
+		err = fmt.Errorf("bad format")
+		return
 	}
 	user, passwdS256B64 := t[0], t[1]
 	passwdS256Slice, err := base64.StdEncoding.DecodeString(passwdS256B64)

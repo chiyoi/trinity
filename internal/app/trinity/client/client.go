@@ -2,55 +2,44 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"time"
 
-	"github.com/chiyoi/trinity/internal/app/trinity/config"
 	"github.com/chiyoi/trinity/internal/app/trinity/db"
 	"github.com/chiyoi/trinity/internal/pkg/logs"
 	"github.com/chiyoi/trinity/pkg/atmt"
 )
 
-var (
-	dbTimeout   = time.Second * 10
+const (
 	pushTimeout = time.Second * 10
 )
 
 func PushMessageToListeners(msg atmt.Message) (err error) {
+	logPrefix := "push message to listeners:"
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("push event to listeners: %w", err)
+			err = fmt.Errorf("push message to listeners: %w", err)
 		}
 	}()
-	bg := context.Background()
-	ls := config.Get[string]("RedisKeyListeners")
-	rdb, _ := db.GetDB()
-	if rdb == nil {
-		err = errors.New("rdb not set")
+	ls, err := db.GetListeners()
+	if err != nil {
 		return
 	}
-	ctx, cancel := context.WithTimeout(bg, dbTimeout)
-	defer cancel()
-	cmd := rdb.SMembers(ctx, ls)
-	if err = cmd.Err(); err != nil {
-		return
-	}
-	for _, l := range cmd.Val() {
-		ctx, cancel := context.WithTimeout(bg, pushTimeout)
-		defer cancel()
-		if err = atmt.PostCtx(ctx, l, msg); err != nil {
-			if _, ok := err.(*url.Error); !ok {
-				return
-			}
-			logs.Warning(fmt.Sprintf("cannot push to listener %s: %s", l, err))
-			ctx, cancel = context.WithTimeout(bg, dbTimeout)
+	for _, l := range ls {
+		go func(l string) {
+			ctx, cancel := context.WithTimeout(context.Background(), pushTimeout)
 			defer cancel()
-			if err = rdb.SRem(ctx, ls, l).Err(); err != nil {
-				return
+			if err = atmt.PushCtx(ctx, l, msg); err != nil {
+				if _, ok := err.(*url.Error); !ok {
+					return
+				}
+				logs.Warning(logPrefix, fmt.Sprintf("push to listener %s: %s", l, err))
+				if err = db.RemoveListener(l); err != nil {
+					return
+				}
 			}
-		}
+		}(l)
 	}
 	return
 }

@@ -10,8 +10,9 @@ type User struct {
 	Token string `bson:"token,omitempty"`
 }
 
+type MessageID = primitive.ObjectID
 type Message struct {
-	MessageId primitive.ObjectID `bson:"_id,omitempty"`
-	SenderId  string             `bson:"user,omitempty"`
-	Content   []atmt.Paragraph   `bson:"content,omitempty"`
+	ID      MessageID        `bson:"_id,omitempty"`
+	Sender  string           `bson:"sender,omitempty"`
+	Content []atmt.Paragraph `bson:"content,omitempty"`
 }

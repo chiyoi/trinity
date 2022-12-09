@@ -1,49 +1,36 @@
 package trinity
 
 import (
+	"context"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	urlpkg "net/url"
+	"time"
 
+	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/chiyoi/trinity/pkg/atmt"
 )
 
-type RequestError interface {
-	error
-	Action() Action
-	StatusCode() atmt.StatusCode
+func Request[Args any, Values any](url string, action Action, args Args, content atmt.Content) (vals Values, ret atmt.Content, err error) {
+	return RequestCtx[Args, Values](context.Background(), url, action, args, content)
 }
-
-type requestError struct {
-	act  Action
-	code atmt.StatusCode
-}
-
-var _ RequestError = (*requestError)(nil)
-
-func (err *requestError) Error() string {
-	return fmt.Sprintf("post error(%d %s)", err.code, err.code)
-}
-
-func (err *requestError) Action() Action              { return err.act }
-func (err *requestError) StatusCode() atmt.StatusCode { return err.code }
-
-func PostMessage(url string, auth string, content []atmt.Paragraph) (err error) {
-	sender, _, err := ParseAuthToken(auth)
+func RequestCtx[Args any, Values any](ctx context.Context, url string, action Action, args Args, content atmt.Content) (vals Values, ret atmt.Content, err error) {
+	b := atmt.MessageBuilder[atmt.DataRequestBuilder[Action, Args]]{
+		Type: atmt.MessageRequest,
+		Data: atmt.DataRequestBuilder[Action, Args]{
+			Action: action,
+			Args:   args,
+		},
+		Content: content,
+	}
+	req, err := b.Message()
 	if err != nil {
 		return
 	}
-	req, err := (&atmt.MessageBuilder[RequestBuilder[ArgsPostMessage]]{
-		Type: atmt.MessageRequest,
-		Data: RequestBuilder[ArgsPostMessage]{
-			Action: ActionPostMessage,
-			Args: ArgsPostMessage{
-				Sender: sender,
-				Auth:   auth,
-			},
-		},
-		Content: content,
-	}).Message()
-	resp, err := atmt.SendMessage(url, req)
+
+	resp, err := atmt.SendMessageCtx(ctx, url, req)
 	if err != nil {
 		return
 	}
@@ -60,174 +47,52 @@ func PostMessage(url string, auth string, content []atmt.Paragraph) (err error) 
 			act:  ActionPostMessage,
 			code: data.StatusCode,
 		}
+		return
 	}
+	if err = json.Unmarshal(data.Values, &vals); err != nil {
+		return
+	}
+	ret = resp.Content
 	return
 }
 
-// func CallApiCtx[Data RespData](ctx context.Context, url string, auth string, req Request) (resp Response[Data], err error) {
-// 	defer func() {
-// 		if err != nil {
-// 			err = fmt.Errorf("call api: %w", err)
-// 		}
-// 	}()
-// 	b, err := json.Marshal(req)
-// 	if err != nil {
-// 		return
-// 	}
+const (
+	reqTimeout = time.Second * 10
+)
 
-// 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(b))
-// 	if err != nil {
-// 		return
-// 	}
-// 	httpReq.Header.Set("Content-Type", "application/json")
-// 	httpReq.Header.Set("Authorization", auth)
+func CacheBlob(url string, auth string, b []byte) (sasURL string, err error) {
+	md5Sum := md5.Sum(b)
+	vals, _, err := Request[ArgsGetBlobCacheURL, ValuesGetBlobCacheURL](
+		url,
+		ActionGetBlobCacheURL,
+		ArgsGetBlobCacheURL{
+			Auth:     auth,
+			BlobName: fmt.Sprintf("%x", md5Sum),
+		},
+		nil,
+	)
+	if err != nil {
+		return
+	}
+	sasURL = vals.SasURL
 
-// 	httpResp, err := http.DefaultClient.Do(httpReq)
-// 	if err != nil || httpResp.StatusCode != http.StatusOK {
-// 		if err == nil {
-// 			err = &apiCallError{
-// 				action:     req.Action,
-// 				statusCode: httpResp.StatusCode,
-// 			}
-// 		}
-// 		return
-// 	}
-
-// 	if b, err = io.ReadAll(httpResp.Body); err != nil {
-// 		return
-// 	}
-// 	if err = json.Unmarshal(b, &resp); err != nil {
-// 		logs.Debug(string(b))
-// 		return
-// 	}
-// 	return
-// }
-// func CallApi[Data RespData](url string, auth string, req Request) (resp Response[Data], err error) {
-// 	return CallApiCtx[Data](context.Background(), url, auth, req)
-// }
-
-// func PostMessage(url string, auth string, a ...any) (messageId string, err error) {
-// 	defer func() {
-// 		if err != nil {
-// 			err = fmt.Errorf("post message: %w", err)
-// 		}
-// 	}()
-// 	resp, err := CallApi[RespDataPostMessage](url, auth, Request{
-// 		Action: ActionPostMessage,
-// 		Data: ReqDataPostMessage{
-// 			Message: message.Format(a...),
-// 		},
-// 	})
-// 	if err != nil {
-// 		return
-// 	}
-// 	messageId = resp.Data.MessageId
-// 	return
-// }
-
-// func GetMessage(url string, auth string, id string) (data RespDataGetMessage, err error) {
-// 	defer func() {
-// 		if err != nil {
-// 			err = fmt.Errorf("get message: %w", err)
-// 		}
-// 	}()
-// 	resp, err := CallApi[RespDataGetMessage](url, auth, Request{
-// 		Action: ActionQueryMessageIdsTimeRange,
-// 		Data: ReqDataGetMessage{
-// 			Id: id,
-// 		},
-// 	})
-// 	if err != nil {
-// 		return
-// 	}
-// 	data = resp.Data
-// 	return
-// }
-
-// func QueryMessageIdsTimeRange(url string, auth string, from, to int64) (ids []string, err error) {
-// 	defer func() {
-// 		if err != nil {
-// 			err = fmt.Errorf("query message ids time range: %w", err)
-// 		}
-// 	}()
-// 	resp, err := CallApi[RespDataQueryMessageTimeRange](url, auth, Request{
-// 		Action: ActionQueryMessageIdsTimeRange,
-// 		Data: ReqDataQueryMessageTimeRange{
-// 			From: from,
-// 			To:   to,
-// 		},
-// 	})
-// 	if err != nil {
-// 		return
-// 	}
-// 	ids = resp.Data.Ids
-// 	return
-// }
-
-// func CacheFileCtx(ctx context.Context, url string, auth string, data []byte) (sasUrl string, err error) {
-// 	defer func() {
-// 		if err != nil {
-// 			err = fmt.Errorf("cache file: %w", err)
-// 		}
-// 	}()
-// 	md5Sum := md5.Sum(data)
-// 	resp, err := CallApiCtx[RespDataCacheFile](ctx, url, auth, Request{
-// 		Action: ActionQueryMessageIdsTimeRange,
-// 		Data: Request{
-// 			Action: ActionCacheFile,
-// 			Data: ReqDataCacheFile{
-// 				Md5SumHex: fmt.Sprintf("%x", md5Sum),
-// 			},
-// 		},
-// 	})
-// 	if err != nil {
-// 		return
-// 	}
-// 	sasUrl = resp.Data.SasURL
-
-// 	u, err := urlpkg.Parse(sasUrl)
-// 	if err != nil {
-// 		return
-// 	}
-// 	credential := azblob.NewAnonymousCredential()
-// 	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
-// 	blockBlobUrl := azblob.NewBlockBlobURL(*u, pipeline)
-
-// 	properties, err := blockBlobUrl.GetProperties(ctx, azblob.BlobAccessConditions{}, azblob.ClientProvidedKeyOptions{})
-// 	if respErr, ok := err.(azblob.ResponseError); ok && respErr.Response().StatusCode == http.StatusNotFound {
-// 		err = nil
-// 	}
-// 	if err != nil {
-// 		return
-// 	}
-
-// 	if !reflect.DeepEqual(md5Sum, properties.ContentMD5()) {
-// 		if _, err = azblob.UploadBufferToBlockBlob(ctx, data, blockBlobUrl, azblob.UploadToBlockBlobOptions{}); err != nil {
-// 			return
-// 		}
-// 	}
-// 	return
-// }
-// func CacheFile(url string, auth string, data []byte) (sasUrl string, err error) {
-// 	return CacheFileCtx(context.Background(), url, auth, data)
-// }
-
-// func VerifyAuthorization(url string, auth string) (pass bool, err error) {
-// 	defer func() {
-// 		if err != nil {
-// 			err = fmt.Errorf("verify authorization: %w", err)
-// 		}
-// 	}()
-// 	if _, err = CallApi[RespDataVerifyAuthorization](url, auth, Request{
-// 		Action: ActionVerifyAuthorization,
-// 		Data:   ReqDataVerifyAuthorization{},
-// 	}); err != nil {
-// 		if acErr, ok := err.(ApiCallError); ok && (acErr.StatusCode() == http.StatusUnauthorized || acErr.StatusCode() == http.StatusForbidden) {
-// 			pass = false
-// 			return
-// 		}
-// 		return
-// 	}
-// 	pass = true
-// 	return
-// }
+	bg := context.Background()
+	credential := azblob.NewAnonymousCredential()
+	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
+	u, err := urlpkg.Parse(sasURL)
+	if err != nil {
+		return
+	}
+	blockBlobURL := azblob.NewBlockBlobURL(*u, pipeline)
+	ctx, cancel := context.WithTimeout(bg, reqTimeout)
+	defer cancel()
+	properties, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{}, azblob.ClientProvidedKeyOptions{})
+	if err == nil && *(*[md5.Size]byte)(properties.ContentMD5()) == md5Sum {
+		return
+	}
+	if responseErr, ok := err.(azblob.ResponseError); err != nil && (!ok || responseErr.Response().StatusCode != http.StatusNotFound) {
+		return
+	}
+	_, err = azblob.UploadBufferToBlockBlob(bg, b, blockBlobURL, azblob.UploadToBlockBlobOptions{})
+	return
+}

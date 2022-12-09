@@ -8,16 +8,20 @@ import (
 	"github.com/chiyoi/trinity/pkg/sdk/trinity"
 )
 
-func Request() (atmt.Matcher, atmt.Handler) {
-	return atmt.Matcher{
-		Match: func(msg atmt.Message) bool {
-			return msg.Type == atmt.MessageRequest
-		},
-	}, handler()
+var Matcher = atmt.Matcher{
+	Match: func(msg atmt.Message) bool {
+		return msg.Type == atmt.MessageRequest
+	},
 }
 
-func handler() atmt.Handler {
-	return atmt.HandlerFunc(func(resp *atmt.Message, post atmt.Message) {
+type reqHandler = func(resp *atmt.Message, req atmt.DataRequest[trinity.Action])
+
+func Handler() atmt.HandlerFunc {
+	handleCacheFile, err := getBlobCacheURLHandler()
+	if err != nil {
+		logs.Fatal(err)
+	}
+	return func(resp *atmt.Message, post atmt.Message) {
 		var req atmt.DataRequest[trinity.Action]
 		if err := json.Unmarshal(post.Data, &req); err != nil {
 			logs.Warning("cannot parse request.")
@@ -28,13 +32,17 @@ func handler() atmt.Handler {
 		case trinity.ActionPostMessage:
 			handlePostMessage(resp, req, post.Content)
 		case trinity.ActionGetMessage:
-		case trinity.ActionQueryMessageIdsTimeRange:
-		case trinity.ActionCacheFile:
+			handleGetMessage(resp, req)
+		case trinity.ActionQueryMessageIdsLatestCount:
+			handleQueryMessageIdsLatestCount(resp, req)
+		case trinity.ActionGetBlobCacheURL:
+			handleCacheFile(resp, req)
 		case trinity.ActionVerifyAuthorization:
+			handleVerifyAuthorization(resp, req)
 		default:
 			logs.Warning("invalid action.")
 			atmt.Error(resp, atmt.StatusBadRequest)
 			return
 		}
-	})
+	}
 }

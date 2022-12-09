@@ -4,11 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 )
 
 func SendMessageCtx(ctx context.Context, url string, msg Message) (resp Message, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("send message: %w", err)
+		}
+	}()
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return
@@ -19,7 +25,12 @@ func SendMessageCtx(ctx context.Context, url string, msg Message) (resp Message,
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpResp, err := http.DefaultClient.Do(httpReq)
-	if err != nil {
+	if err != nil || httpResp.StatusCode != http.StatusOK {
+		if err == nil {
+			err = &httpError{
+				code: httpResp.StatusCode,
+			}
+		}
 		return
 	}
 	if data, err = io.ReadAll(httpResp.Body); err != nil {
@@ -34,11 +45,16 @@ func SendMessage(url string, msg Message) (resp Message, err error) {
 	return SendMessageCtx(context.Background(), url, msg)
 }
 
-func PostCtx(ctx context.Context, url string, msg Message) (err error) {
-	if msg.Type != MessagePost {
+func PushCtx(ctx context.Context, url string, msg Message) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("push: %w", err)
+		}
+	}()
+	if msg.Type != MessagePush {
 		err = &messageTypeError{
 			typ: msg.Type,
-			exp: MessagePost,
+			exp: MessagePush,
 		}
 	}
 	resp, err := SendMessageCtx(ctx, url, msg)
@@ -63,6 +79,6 @@ func PostCtx(ctx context.Context, url string, msg Message) (err error) {
 	}
 	return
 }
-func Post(url string, msg Message) (err error) {
-	return PostCtx(context.Background(), url, msg)
+func Push(url string, msg Message) (err error) {
+	return PushCtx(context.Background(), url, msg)
 }

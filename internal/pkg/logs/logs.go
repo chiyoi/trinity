@@ -6,11 +6,11 @@ import (
 )
 
 var (
-	lInfo    = log.New(os.Stdout, "[INFO] ", log.Lmsgprefix|log.LstdFlags|log.LUTC)
-	lWarning = log.New(os.Stderr, "[WARNING] ", log.Lmsgprefix|log.Lshortfile|log.LstdFlags|log.LUTC)
-	lError   = log.New(os.Stderr, "[ERROR] ", log.Lmsgprefix|log.Lshortfile|log.LstdFlags|log.LUTC)
-	lFatal   = log.New(os.Stderr, "[FATAL] ", log.Lmsgprefix|log.Lshortfile|log.LstdFlags|log.LUTC)
-	lDebug   = log.New(os.Stderr, "[DEBUG] ", log.Lmsgprefix|log.Lshortfile|log.LstdFlags|log.LUTC)
+	lInfo    = log.New(os.Stdout, "[info] ", log.Lmsgprefix|log.LstdFlags|log.LUTC)
+	lWarning = log.New(os.Stderr, "[warning] ", log.Lmsgprefix|log.Lshortfile|log.LstdFlags|log.LUTC)
+	lError   = log.New(os.Stderr, "[error] ", log.Lmsgprefix|log.Lshortfile|log.LstdFlags|log.LUTC)
+	lFatal   = log.New(os.Stderr, "[fatal] ", log.Lmsgprefix|log.Lshortfile|log.LstdFlags|log.LUTC)
+	lDebug   = log.New(os.Stderr, "[debug] ", log.Lmsgprefix|log.Lshortfile|log.LstdFlags|log.LUTC)
 )
 
 var (

@@ -57,10 +57,8 @@ func (srv *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (srv *Server) ListenAndServe() (err error) {
 	srv.httpSrv = &http.Server{
-		Addr: srv.Addr,
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			srv.handleHTTP(w, r)
-		}),
+		Addr:    srv.Addr,
+		Handler: http.HandlerFunc(srv.handleHTTP),
 	}
 	return srv.httpSrv.ListenAndServe()
 }

@@ -54,8 +54,8 @@ func (mux *ServeMux) ServeMessage(resp *Message, post Message) {
 	idx := mux.handler(post)
 	mux.mu.Lock()
 	defer mux.mu.Unlock()
-	e := mux.es[idx]
 	if idx != -1 {
+		e := mux.es[idx]
 		e.h.ServeMessage(resp, post)
 		if e.m.Temporary {
 			mux.es = append(mux.es[:idx], mux.es[idx+1:]...)

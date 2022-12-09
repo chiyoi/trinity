@@ -1,3 +1,0 @@
-[submodule "pkg/websocket"]
-	path = pkg/websocket
-	url = https://github.com/chiyoi/websocket

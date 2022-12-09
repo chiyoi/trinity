@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	sasExpire = time.Hour * 24 * 365 * 10
+	sasAlive = time.Hour * 24 * 365 * 10
 )
 
 func getBlobCacheURLHandler() (h reqHandler, err error) {
@@ -65,7 +65,7 @@ func getBlobCacheURLHandler() (h reqHandler, err error) {
 
 		sas := &azblob.BlobSASSignatureValues{
 			StartTime:  time.Now().UTC(),
-			ExpiryTime: time.Now().UTC().Add(sasExpire),
+			ExpiryTime: time.Now().UTC().Add(sasAlive),
 			Permissions: azblob.BlobSASPermissions{
 				Read:   true,
 				Create: true,

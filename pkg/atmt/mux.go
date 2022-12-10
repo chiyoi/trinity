@@ -1,6 +1,7 @@
 package atmt
 
 import (
+	"io"
 	"sort"
 	"sync"
 )
@@ -95,3 +96,20 @@ func (mux *ServeMux) Handler(msg Message) (m Matcher, h Handler) {
 func NewServeMux() *ServeMux { return new(ServeMux) }
 
 var DefaultServeMux = NewServeMux()
+
+type multiHandler struct {
+	handlers []Handler
+}
+
+var _ Handler = (*multiHandler)(nil)
+
+func (mh *multiHandler) ServeMessage(resp *Message, post Message) {
+	for _, h := range mh.handlers {
+		io.MultiWriter()
+		h.ServeMessage(resp, post)
+	}
+}
+
+func MultiHandler(handlers []Handler) Handler {
+	return &multiHandler{handlers}
+}

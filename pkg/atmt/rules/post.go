@@ -8,7 +8,7 @@ import (
 
 func HasPrefix(prefix string) Rule {
 	return And(
-		Type(atmt.MessagePush),
+		MessageType(atmt.MessagePush),
 		func(msg atmt.Message) bool {
 			return strings.HasPrefix(msg.Content.Plaintext(), prefix)
 		},
@@ -17,7 +17,7 @@ func HasPrefix(prefix string) Rule {
 
 func Contains(kws ...string) Rule {
 	return And(
-		Type(atmt.MessagePush),
+		MessageType(atmt.MessagePush),
 		func(msg atmt.Message) bool {
 			s := msg.Content.Plaintext()
 			for _, kw := range kws {
@@ -36,7 +36,7 @@ func ExactlyOneOf(msgs ...string) Rule {
 		m[msg] = true
 	}
 	return And(
-		Type(atmt.MessagePush),
+		MessageType(atmt.MessagePush),
 		func(msg atmt.Message) bool {
 			return m[msg.Content.Plaintext()]
 		},

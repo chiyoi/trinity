@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/chiyoi/neko03/pkg/logs"
 	"github.com/chiyoi/neko03/pkg/neko"
-	"github.com/chiyoi/trinity/internal/pkg/logs"
 )
 
 type Server struct {

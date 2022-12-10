@@ -1,11 +1,19 @@
 package atmt
 
-func Error(resp *Message, code StatusCode) (err error) {
+func Error(resp *Message, code StatusCode) {
 	b := MessageBuilder[DataResponse]{
 		Type: MessageResponse,
 		Data: DataResponse{
 			StatusCode: code,
 		},
 	}
-	return b.Write(resp)
+	_ = b.Write(resp)
+}
+
+func BadRequest(resp *Message) {
+	Error(resp, StatusBadRequest)
+}
+
+func InternalServerError(resp *Message) {
+	Error(resp, StatusInternalServerError)
 }

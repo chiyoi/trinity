@@ -6,7 +6,13 @@ import (
 
 type Rule func(msg atmt.Message) bool
 
-func Type(typ atmt.MessageType) Rule {
+func (r Rule) Matcher() atmt.Matcher {
+	return atmt.Matcher{
+		Match: r,
+	}
+}
+
+func MessageType(typ atmt.MessageType) Rule {
 	return func(msg atmt.Message) bool {
 		return msg.Type == typ
 	}

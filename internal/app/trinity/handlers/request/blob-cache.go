@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/chiyoi/neko03/pkg/logs"
 	"github.com/chiyoi/trinity/internal/app/trinity/config"
-	"github.com/chiyoi/trinity/internal/pkg/logs"
 	"github.com/chiyoi/trinity/pkg/atmt"
 	"github.com/chiyoi/trinity/pkg/sdk/trinity"
 )
@@ -17,48 +17,41 @@ const (
 	sasAlive = time.Hour * 24 * 365 * 10
 )
 
-func getBlobCacheURLHandler() (h reqHandler, err error) {
-	accountName, err := config.GetErr[string]("AzureStorageAccount")
-	if err != nil {
-		return
-	}
-	accountKey, err := config.GetErr[string]("AzureStorageKey")
-	if err != nil {
-		return
-	}
-	containerName, err := config.GetErr[string]("FileCacheContainer")
-	if err != nil {
-		return
-	}
+func getBlobCacheURLHandler() (h reqHandler) {
+	accountName, accountKey, containerName :=
+		config.Get[string]("AzureStorageAccount"),
+		config.Get[string]("AzureStorageKey"),
+		config.Get[string]("ContainerBlobCache")
 
-	u, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net", accountName))
+	u, err := url.Parse(fmt.Sprintf(
+		"https://%s.blob.core.windows.net",
+		accountName,
+	))
 	if err != nil {
-		return
+		logs.Panic(err)
 	}
 	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
-		return
+		logs.Panic(err)
 	}
 	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
 	serviceUrl := azblob.NewServiceURL(*u, pipeline)
 	containerUrl := serviceUrl.NewContainerURL(containerName)
 
-	h = func(resp *atmt.Message, req atmt.DataRequest[trinity.Action]) {
-		logPrefix := "handle cache file:"
+	return func(resp *atmt.Message, req atmt.DataRequest[trinity.Action]) {
 		var args trinity.ArgsGetBlobCacheURL
 		if err := json.Unmarshal(req.Args, &args); err != nil {
-			logs.Warning(logPrefix, err)
+			logs.Warning(err)
 			atmt.Error(resp, atmt.StatusBadRequest)
 			return
 		}
 		_, pass, err := verifyAuth(args.Auth)
 		if err != nil {
-			logs.Error(logPrefix, err)
-			atmt.Error(resp, atmt.StatusInternalServerError)
+			logs.Error(err)
+			atmt.InternalServerError(resp)
 			return
 		}
 		if !pass {
-			logs.Error(logPrefix, err)
 			atmt.Error(resp, atmt.StatusUnauthorized)
 			return
 		}
@@ -77,8 +70,8 @@ func getBlobCacheURLHandler() (h reqHandler, err error) {
 		}
 		sasQuery, err := sas.NewSASQueryParameters(credential)
 		if err != nil {
-			logs.Error(logPrefix, err)
-			atmt.Error(resp, atmt.StatusInternalServerError)
+			logs.Error(err)
+			atmt.InternalServerError(resp)
 			return
 		}
 		sasURL := containerUrl.NewBlobURL(args.BlobName).URL()
@@ -94,10 +87,9 @@ func getBlobCacheURLHandler() (h reqHandler, err error) {
 			Content: []atmt.Paragraph{},
 		}
 		if err = b.Write(resp); err != nil {
-			logs.Error(logPrefix, err)
-			atmt.Error(resp, atmt.StatusInternalServerError)
+			logs.Error(err)
+			atmt.InternalServerError(resp)
 			return
 		}
 	}
-	return
 }

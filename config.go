@@ -10,7 +10,7 @@ import (
 var TrinityConfig = map[string]any{
 	"ServiceURL": "http://trinity/",
 
-	"MongodbURI": url.URL{
+	"MongodbURI": (&url.URL{
 		Scheme: "mongodb+srv",
 		Host:   "cluster0.catoops.mongodb.net",
 		Path:   "/",
@@ -19,21 +19,22 @@ var TrinityConfig = map[string]any{
 			"k14iz2GNilk37cna", // cspell: disable-line
 		),
 		RawQuery: "maxPoolSize=20&w=majority",
-	},
-	"MongodbDatabase":           "trinity",
-	"MongodbCollectionNekos":    "nekos",
-	"MongodbCollectionMessages": "messages",
+	}).String(),
+	"MongodbDatabase":    "trinity",
+	"CollectionNekos":    "nekos",
+	"CollectionMessages": "messages",
 
 	"RedisOptions": &redis.Options{
 		Addr:     "redis-18080.c56.east-us.azure.cloud.redislabs.com:18080",
 		Username: "trinity",
 		Password: "Neko03Trinity@redis",
+		DB:       0,
 	},
-	"RedisKeyListeners": "trinity:listeners",
+	"KeyListeners": "trinity:listeners",
 
 	"AzureStorageAccount": "neko03storage",
 	"AzureStorageKey":     "lZzvHnmRwYiD1t9xEDZhxn07eNtmn4J3qiu/8UGkfGEeL1Pz3C/yR8+hY7rmJo/xVuTLMtilsq/7+ASte3hwBQ==",
-	"FileCacheContainer":  "trinity-blob-cache",
+	"ContainerBlobCache":  "trinity-blob-cache",
 }
 
 var AiraConfig = map[string]any{
@@ -50,5 +51,5 @@ var AiraConfig = map[string]any{
 		Username: "aira",
 		Password: "Neko03Aira@redis",
 	},
-	"RedisKeyListeners": "trinity:listeners",
+	"KeyListeners": "trinity:listeners",
 }

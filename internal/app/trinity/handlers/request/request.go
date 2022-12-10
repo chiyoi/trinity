@@ -3,24 +3,15 @@ package request
 import (
 	"encoding/json"
 
-	"github.com/chiyoi/trinity/internal/pkg/logs"
+	"github.com/chiyoi/neko03/pkg/logs"
 	"github.com/chiyoi/trinity/pkg/atmt"
 	"github.com/chiyoi/trinity/pkg/sdk/trinity"
 )
 
-var Matcher = atmt.Matcher{
-	Match: func(msg atmt.Message) bool {
-		return msg.Type == atmt.MessageRequest
-	},
-}
-
 type reqHandler = func(resp *atmt.Message, req atmt.DataRequest[trinity.Action])
 
 func Handler() atmt.HandlerFunc {
-	handleCacheFile, err := getBlobCacheURLHandler()
-	if err != nil {
-		logs.Fatal(err)
-	}
+	handleCacheFile := getBlobCacheURLHandler()
 	return func(resp *atmt.Message, post atmt.Message) {
 		var req atmt.DataRequest[trinity.Action]
 		if err := json.Unmarshal(post.Data, &req); err != nil {
@@ -41,7 +32,7 @@ func Handler() atmt.HandlerFunc {
 			handleVerifyAuthorization(resp, req)
 		default:
 			logs.Warning("invalid action.")
-			atmt.Error(resp, atmt.StatusBadRequest)
+			atmt.BadRequest(resp)
 			return
 		}
 	}

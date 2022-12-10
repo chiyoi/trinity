@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/chiyoi/trinity/internal/app/trinity/config"
@@ -13,15 +12,12 @@ import (
 )
 
 func collectionMessages() (coll *mongo.Collection, err error) {
-	collName, err := config.GetErr[string]("MongodbCollectionMessages")
-	if err != nil {
-		return
-	}
 	_, mongodb := GetDB()
 	if mongodb == nil {
 		err = errMongodbNotSet
 		return
 	}
+	collName := config.Get[string]("CollectionMessages")
 	coll = mongodb.Collection(collName)
 	return
 }
@@ -29,7 +25,7 @@ func collectionMessages() (coll *mongo.Collection, err error) {
 func PostMessage(msg Message) (id MessageID, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("post message: %w", err)
+			err = fmt.Errorf("db: %w", err)
 		}
 	}()
 	coll, err := collectionMessages()
@@ -45,7 +41,7 @@ func PostMessage(msg Message) (id MessageID, err error) {
 	}
 	id, ok := resp.InsertedID.(primitive.ObjectID)
 	if !ok {
-		err = errors.New("unexpected non-ObjectID message id")
+		err = fmt.Errorf("unexpected non-ObjectID message id")
 		return
 	}
 	return
@@ -54,7 +50,7 @@ func PostMessage(msg Message) (id MessageID, err error) {
 func GetMessage(id MessageID) (msg Message, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("get message: %w", err)
+			err = fmt.Errorf("db: %w", err)
 		}
 	}()
 	coll, err := collectionMessages()
@@ -73,7 +69,7 @@ func GetMessage(id MessageID) (msg Message, err error) {
 func QueryMessageIdsLatestCount(count int) (ids []MessageID, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query message ids time range: %w", err)
+			err = fmt.Errorf("db: %w", err)
 		}
 	}()
 	coll, err := collectionMessages()

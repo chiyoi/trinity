@@ -1,8 +1,8 @@
 package config
 
 import (
+	"github.com/chiyoi/neko03/pkg/logs"
 	"github.com/chiyoi/trinity/internal/configs"
-	"github.com/chiyoi/trinity/internal/pkg/logs"
 	"github.com/go-redis/redis/v8"
 )
 
@@ -30,7 +30,7 @@ func GetErr[T any](key string) (T, error) {
 func Get[T any](key string) (val T) {
 	val, err := GetErr[T](key)
 	if err != nil {
-		logs.Fatal(err)
+		logs.Panic(err)
 	}
 	return
 }

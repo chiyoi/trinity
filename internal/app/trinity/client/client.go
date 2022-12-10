@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/chiyoi/neko03/pkg/logs"
 	"github.com/chiyoi/trinity/internal/app/trinity/db"
-	"github.com/chiyoi/trinity/internal/pkg/logs"
 	"github.com/chiyoi/trinity/pkg/atmt"
 )
 
@@ -16,7 +16,6 @@ const (
 )
 
 func PushMessageToListeners(msg atmt.Message) (err error) {
-	logPrefix := "push message to listeners:"
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("push message to listeners: %w", err)
@@ -34,7 +33,7 @@ func PushMessageToListeners(msg atmt.Message) (err error) {
 				if _, ok := err.(*url.Error); !ok {
 					return
 				}
-				logs.Warning(logPrefix, fmt.Sprintf("push to listener %s: %s", l, err))
+				logs.Warningf("push to listener %s: %s", l, err)
 				if err = db.RemoveListener(l); err != nil {
 					return
 				}

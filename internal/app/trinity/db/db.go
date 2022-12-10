@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"sync"
 	"time"
 
@@ -23,39 +22,22 @@ var (
 )
 
 func OpenMongo() (db *mongo.Database, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("open mongo: %w", err)
-		}
-	}()
-	bg := context.Background()
-	mongodbUri, err := config.GetErr[url.URL]("MongodbURI")
-	if err != nil {
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(bg, dbTimeout)
+	mongodbURI := config.Get[string]("MongodbURI")
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongodbUri.String()))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongodbURI))
 	if err != nil {
 		return
 	}
 
-	mongodbDatabase, err := config.GetErr[string]("MongodbDatabase")
-	if err != nil {
-		return
-	}
+	mongodbDatabase := config.Get[string]("MongodbDatabase")
 	db = client.Database(mongodbDatabase)
 	return
 }
 
-func OpenRedis() (rdb *redis.Client, err error) {
-	opt, err := config.GetErr[*redis.Options]("RedisOptions")
-	if err != nil {
-		return
-	}
-	rdb = redis.NewClient(opt)
-	return
+func OpenRedis() (rdb *redis.Client) {
+	opt := config.Get[*redis.Options]("RedisOptions")
+	return redis.NewClient(opt)
 }
 
 var pool struct {
@@ -74,6 +56,7 @@ func SetDB(r *redis.Client, m *mongo.Database) {
 		pool.mongodb = m
 	}
 }
+
 func GetDB() (r *redis.Client, m *mongo.Database) {
 	pool.mu.RLock()
 	defer pool.mu.RUnlock()

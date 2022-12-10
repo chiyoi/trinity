@@ -8,7 +8,7 @@ import (
 
 func TestVerifyAuthorization(t *testing.T) {
 	auth := trinity.CreateAuthorization("chiyoi", "Chiyoi@trinity")
-	resp, _, err := trinity.Request[trinity.ArgsVerifyAuthorization, trinity.ValuesVerifyAuthorization](
+	vals, _, err := trinity.Request[trinity.ArgsVerifyAuthorization, trinity.ValuesVerifyAuthorization](
 		"http://localhost/",
 		trinity.ActionVerifyAuthorization,
 		trinity.ArgsVerifyAuthorization{
@@ -19,7 +19,7 @@ func TestVerifyAuthorization(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !resp.Pass {
+	if !vals.Pass {
 		t.Fatal("not passed.")
 	}
 }

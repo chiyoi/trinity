@@ -4,9 +4,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/chiyoi/neko03/pkg/logs"
 	"github.com/chiyoi/trinity/internal/app/aira/client"
 	"github.com/chiyoi/trinity/internal/app/aira/handlers"
-	"github.com/chiyoi/trinity/internal/pkg/logs"
 	"github.com/chiyoi/trinity/pkg/atmt"
 	"github.com/chiyoi/trinity/pkg/atmt/rules"
 )

@@ -3,29 +3,27 @@ package request
 import (
 	"encoding/json"
 
+	"github.com/chiyoi/neko03/pkg/logs"
 	"github.com/chiyoi/trinity/internal/app/trinity/client"
 	"github.com/chiyoi/trinity/internal/app/trinity/db"
-	"github.com/chiyoi/trinity/internal/pkg/logs"
 	"github.com/chiyoi/trinity/pkg/atmt"
 	"github.com/chiyoi/trinity/pkg/sdk/trinity"
 )
 
 func handlePostMessage(resp *atmt.Message, req atmt.DataRequest[trinity.Action], content []atmt.Paragraph) {
-	logPrefix := "handle post message:"
 	var args trinity.ArgsPostMessage
 	if err := json.Unmarshal(req.Args, &args); err != nil {
-		logs.Warning(logPrefix, err)
-		atmt.Error(resp, atmt.StatusBadRequest)
+		logs.Warning(err)
+		atmt.BadRequest(resp)
 		return
 	}
 	user, pass, err := verifyAuth(args.Auth)
 	if err != nil {
-		logs.Error(logPrefix, err)
-		atmt.Error(resp, atmt.StatusInternalServerError)
+		logs.Error(err)
+		atmt.InternalServerError(resp)
 		return
 	}
 	if !pass {
-		logs.Error(logPrefix, err)
 		atmt.Error(resp, atmt.StatusUnauthorized)
 		return
 	}
@@ -35,24 +33,30 @@ func handlePostMessage(resp *atmt.Message, req atmt.DataRequest[trinity.Action],
 		Content: content,
 	})
 	if err != nil {
-		logs.Error(logPrefix, err)
-		atmt.Error(resp, atmt.StatusInternalServerError)
+		logs.Error(err)
+		atmt.InternalServerError(resp)
 		return
 	}
 
-	msg, err := (&atmt.MessageBuilder[atmt.DataPush]{
-		Type: atmt.MessagePush,
-		Data: atmt.DataPush{
-			MessageID: id,
-			Sender:    user,
-		},
-		Content: content,
-	}).Message()
-	if err != nil {
-		logs.Error(logPrefix, err)
-		atmt.Error(resp, atmt.StatusInternalServerError)
-		return
-	}
+	go func() {
+		msg, err := (&atmt.MessageBuilder[atmt.DataPush]{
+			Type: atmt.MessagePush,
+			Data: atmt.DataPush{
+				MessageID: id,
+				Sender:    user,
+			},
+			Content: content,
+		}).Message()
+		if err != nil {
+			logs.Error(err)
+			return
+		}
+		if err = client.PushMessageToListeners(msg); err != nil {
+			logs.Error(err)
+			return
+		}
+	}()
+
 	b := atmt.MessageBuilder[atmt.DataResponseBuilder[trinity.ValuesPostMessage]]{
 		Type: atmt.MessageResponse,
 		Data: atmt.DataResponseBuilder[trinity.ValuesPostMessage]{
@@ -64,42 +68,35 @@ func handlePostMessage(resp *atmt.Message, req atmt.DataRequest[trinity.Action],
 		Content: content,
 	}
 	if err = b.Write(resp); err != nil {
-		logs.Error(logPrefix, err)
-		atmt.Error(resp, atmt.StatusInternalServerError)
+		logs.Error(err)
+		atmt.InternalServerError(resp)
 		return
 	}
 
-	if err = client.PushMessageToListeners(msg); err != nil {
-		logs.Error(logPrefix, err)
-		atmt.Error(resp, atmt.StatusInternalServerError)
-		return
-	}
 }
 
 func handleGetMessage(resp *atmt.Message, req atmt.DataRequest[trinity.Action]) {
-	logPrefix := "handle get message:"
 	var args trinity.ArgsGetMessage
 	if err := json.Unmarshal(req.Args, &args); err != nil {
-		logs.Warning(logPrefix, err)
-		atmt.Error(resp, atmt.StatusBadRequest)
+		logs.Warning(err)
+		atmt.BadRequest(resp)
 		return
 	}
 	_, pass, err := verifyAuth(args.Auth)
 	if err != nil {
-		logs.Error(logPrefix, err)
-		atmt.Error(resp, atmt.StatusInternalServerError)
+		logs.Error(err)
+		atmt.InternalServerError(resp)
 		return
 	}
 	if !pass {
-		logs.Error(logPrefix, err)
 		atmt.Error(resp, atmt.StatusUnauthorized)
 		return
 	}
 
 	msg, err := db.GetMessage(args.ID)
 	if err != nil {
-		logs.Error(logPrefix, err)
-		atmt.Error(resp, atmt.StatusInternalServerError)
+		logs.Error(err)
+		atmt.InternalServerError(resp)
 		return
 	}
 	b := atmt.MessageBuilder[atmt.DataResponseBuilder[trinity.ValuesGetMessage]]{
@@ -114,36 +111,34 @@ func handleGetMessage(resp *atmt.Message, req atmt.DataRequest[trinity.Action]) 
 		Content: msg.Content,
 	}
 	if err = b.Write(resp); err != nil {
-		logs.Error(logPrefix, err)
-		atmt.Error(resp, atmt.StatusInternalServerError)
+		logs.Error(err)
+		atmt.InternalServerError(resp)
 		return
 	}
 }
 
 func handleQueryMessageIdsLatestCount(resp *atmt.Message, req atmt.DataRequest[trinity.Action]) {
-	logPrefix := "handle query message ids latest count:"
 	var args trinity.ArgsQueryMessageIdsLatestCount
 	if err := json.Unmarshal(req.Args, &args); err != nil {
-		logs.Warning(logPrefix, err)
-		atmt.Error(resp, atmt.StatusBadRequest)
+		logs.Warning(err)
+		atmt.BadRequest(resp)
 		return
 	}
 	_, pass, err := verifyAuth(args.Auth)
 	if err != nil {
-		logs.Error(logPrefix, err)
-		atmt.Error(resp, atmt.StatusInternalServerError)
+		logs.Error(err)
+		atmt.InternalServerError(resp)
 		return
 	}
 	if !pass {
-		logs.Error(logPrefix, err)
 		atmt.Error(resp, atmt.StatusUnauthorized)
 		return
 	}
 
 	ids, err := db.QueryMessageIdsLatestCount(args.Count)
 	if err != nil {
-		logs.Error(logPrefix, err)
-		atmt.Error(resp, atmt.StatusInternalServerError)
+		logs.Error(err)
+		atmt.InternalServerError(resp)
 		return
 	}
 
@@ -156,9 +151,9 @@ func handleQueryMessageIdsLatestCount(resp *atmt.Message, req atmt.DataRequest[t
 			},
 		},
 	}
-	if *resp, err = b.Message(); err != nil {
-		logs.Error(logPrefix, err)
-		atmt.Error(resp, atmt.StatusInternalServerError)
+	if err = b.Write(resp); err != nil {
+		logs.Error(err)
+		atmt.InternalServerError(resp)
 		return
 	}
 }

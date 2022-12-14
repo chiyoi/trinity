@@ -31,12 +31,16 @@ func ParseAuthorization(auth string) (user string, passwdS256 [sha256.Size]byte,
 	}
 	t := strings.Split(string(token), ":")
 	if len(t) != 2 {
-		err = fmt.Errorf("bad format")
+		err = fmt.Errorf("bad format(cannot get user and passwd pair)")
 		return
 	}
 	user, passwdS256B64 := t[0], t[1]
 	passwdS256Slice, err := base64.StdEncoding.DecodeString(passwdS256B64)
 	if err != nil {
+		return
+	}
+	if len(passwdS256Slice) != sha256.Size {
+		err = fmt.Errorf("bad format(decoded slice is not sha256 sum)")
 		return
 	}
 	passwdS256 = *(*[sha256.Size]byte)(passwdS256Slice)

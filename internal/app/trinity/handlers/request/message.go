@@ -17,10 +17,8 @@ func handlePostMessage(resp *atmt.Message, req atmt.DataRequest[trinity.Action],
 		atmt.BadRequest(resp)
 		return
 	}
-	user, pass, err := verifyAuth(args.Auth)
+	user, pass, err := verifyAuth(resp, args.Auth)
 	if err != nil {
-		logs.Error(err)
-		atmt.InternalServerError(resp)
 		return
 	}
 	if !pass {
@@ -82,10 +80,8 @@ func handleGetMessage(resp *atmt.Message, req atmt.DataRequest[trinity.Action]) 
 		atmt.BadRequest(resp)
 		return
 	}
-	_, pass, err := verifyAuth(args.Auth)
+	_, pass, err := verifyAuth(resp, args.Auth)
 	if err != nil {
-		logs.Error(err)
-		atmt.InternalServerError(resp)
 		return
 	}
 	if !pass {
@@ -124,7 +120,7 @@ func handleQueryMessageIdsLatestCount(resp *atmt.Message, req atmt.DataRequest[t
 		atmt.BadRequest(resp)
 		return
 	}
-	_, pass, err := verifyAuth(args.Auth)
+	_, pass, err := verifyAuth(resp, args.Auth)
 	if err != nil {
 		logs.Error(err)
 		atmt.InternalServerError(resp)

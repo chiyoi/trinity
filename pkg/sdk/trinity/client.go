@@ -13,9 +13,6 @@ import (
 	"github.com/chiyoi/trinity/pkg/atmt"
 )
 
-func Request[Args any, Values any](url string, action Action, args Args, content atmt.Content) (vals Values, ret atmt.Content, err error) {
-	return RequestCtx[Args, Values](context.Background(), url, action, args, content)
-}
 func RequestCtx[Args any, Values any](ctx context.Context, url string, action Action, args Args, content atmt.Content) (vals Values, ret atmt.Content, err error) {
 	b := atmt.MessageBuilder[atmt.DataRequestBuilder[Action, Args]]{
 		Type: atmt.MessageRequest,
@@ -54,6 +51,9 @@ func RequestCtx[Args any, Values any](ctx context.Context, url string, action Ac
 	}
 	ret = resp.Content
 	return
+}
+func Request[Args any, Values any](url string, action Action, args Args, content atmt.Content) (vals Values, ret atmt.Content, err error) {
+	return RequestCtx[Args, Values](context.Background(), url, action, args, content)
 }
 
 const (

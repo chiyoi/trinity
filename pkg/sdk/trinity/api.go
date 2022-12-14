@@ -37,9 +37,8 @@ func (act Action) String() (str string) {
 	}
 }
 
-type void = struct{}
-
 type MessageID = primitive.ObjectID
+type void = struct{}
 
 type ArgsPostMessage struct {
 	Auth string `json:"auth"`

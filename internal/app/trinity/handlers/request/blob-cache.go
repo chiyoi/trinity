@@ -45,10 +45,8 @@ func getBlobCacheURLHandler() (h reqHandler) {
 			atmt.Error(resp, atmt.StatusBadRequest)
 			return
 		}
-		_, pass, err := verifyAuth(args.Auth)
+		_, pass, err := verifyAuth(resp, args.Auth)
 		if err != nil {
-			logs.Error(err)
-			atmt.InternalServerError(resp)
 			return
 		}
 		if !pass {
